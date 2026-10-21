@@ -7,6 +7,7 @@
 
 ![TaskFlow_Screenshot1.jpg](TaskFlow_Screenshot1.jpg)
 ![TaskFlow_Screenshot2.jpg](TaskFlow_Screenshot2.jpg)
+![TaskFlow_Screenshot3.jpg](TaskFlow_Screenshot3.jpg)
 
 Bei vielen Aufgaben ist es schwer, den Überblick zu behalten. Vor allem, wenn man ein Team leitet.
 Es gibt zahlreiche Software dafür auf dem Markt. Mir waren alle zu unübersichtlich, zu umfangreich, zu teuer und ohne Datensicherheit. Da ich nicht fündig geworden bin, habe ich für mich mit Google Gemini 3 eine eigene App erstellt.
