@@ -1,6 +1,8 @@
 # TaskFlow
 &#x1F537; app for managing tasks easily &#x1F537;
 
+#tasks #gantt #projectplanning #projectmanagement
+
 &#x27A1; Aufgaben eines Teams einfach mit einem Gantt-Diagramm organisieren.
 
 ![](TaskFlow_Screenshot1.jpg)
