@@ -3,7 +3,7 @@
 
 #tasks #gantt #projectplanning #projectmanagement
 
-&#x27A1; Aufgaben eines Teams einfach mit einem Gantt-Diagramm organisieren.
+&#x27A1; **Aufgaben eines Teams einfach mit einem Gantt-Diagramm organisieren.**
 
 ![TaskFlow_Screenshot1.jpg](TaskFlow_Screenshot1.jpg)
 ![TaskFlow_Screenshot2.jpg](TaskFlow_Screenshot2.jpg)
