@@ -48,6 +48,7 @@ An der Anwendung kann noch einiges verbessert werden:
 - Rolle des Bearbeiters im Team eingeben
 - Farbe des Bearbeiters ändern
 - Ansicht "Monat" verbessern
+- Zoom in Gantt-Diagramm
 - Druck-Layout-Ansicht verändern
 
 --------------------------------------------
