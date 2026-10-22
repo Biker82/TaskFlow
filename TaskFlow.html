@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskFlow  (c) Biker82@github.com</title>
+    <title>TaskFlow  (c) Tobias Schunn</title>
+    <!-- VERSION 9.4 -->
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -65,12 +66,26 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-xl tracking-tight leading-none text-slate-900 dark:text-white">TaskFlow</h1>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">(c) Biker82@github.com</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">(c) Tobias Schunn</p>
                 </div>
             </div>
 
-            <!-- Controls & Actions -->
-            <div class="flex items-center flex-wrap gap-2">
+            <!-- Auto-Backup Widget & Controls -->
+            <div class="flex items-center flex-wrap gap-3">
+                <!-- Auto-Backup Status Indicator -->
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs">
+                    <button id="btn-toggle-backup" class="flex items-center gap-1.5 font-medium hover:text-brand-600 dark:hover:text-brand-400 transition" title="Auto-Sicherung konfigurieren / ein-ausschalten">
+                        <span id="backup-status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                        <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400"></i>
+                        <span id="backup-status-text" class="text-slate-700 dark:text-slate-300">Auto-Backup: Nicht eingerichtet</span>
+                    </button>
+                    <button id="btn-setup-backup" class="ml-1 px-2 py-0.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded text-[11px] transition shadow-2xs">
+                        Pfad wählen
+                    </button>
+                </div>
+
+                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+
                 <button id="btn-add-task" class="flex items-center gap-1.5 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
                     <span>Neue Aufgabe</span>
@@ -80,10 +95,10 @@
                     <span>Team</span>
                 </button>
 
-                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
 
                 <!-- Export / Import -->
-                <button id="btn-export" title="Daten exportieren (JSON)" class="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
+                <button id="btn-export" title="Manuell als JSON exportieren" class="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
                     <i data-lucide="download" class="w-4 h-4"></i>
                 </button>
                 <label id="btn-import-label" title="Daten importieren (JSON)" class="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer">
@@ -118,7 +133,9 @@
                     <option value="ALL">Alle Status</option>
                     <option value="OPEN">Offen</option>
                     <option value="IN_PROGRESS">In Bearbeitung</option>
+                    <option value="WAIT">warte auf andere</option>
                     <option value="COMPLETED">Erledigt</option>
+	            
                 </select>
 
                 <button id="btn-delete-completed" title="Erledigte Aufgaben löschen" class="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition text-xs flex items-center gap-1 font-medium">
@@ -131,9 +148,9 @@
             <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0 border-slate-200 dark:border-slate-700">
                 <!-- Timeline View Mode Selector (Tage / Wochen / Monate) -->
                 <div class="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <button id="view-mode-days" class="px-2.5 py-1 text-xs font-semibold rounded-md transition transition-all bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm">Tage</button>
-                    <button id="view-mode-weeks" class="px-2.5 py-1 text-xs font-semibold rounded-md transition transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Wochen (KW)</button>
-                    <button id="view-mode-months" class="px-2.5 py-1 text-xs font-semibold rounded-md transition transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Monate</button>
+                    <button id="view-mode-days" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm">Tage</button>
+                    <button id="view-mode-weeks" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Wochen (KW)</button>
+                    <button id="view-mode-months" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Monate</button>
                 </div>
 
                 <!-- Main View Tabs (Gantt vs Task List) -->
@@ -163,32 +180,23 @@
                         <span class="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300" id="task-count-badge">0</span>
                     </div>
                     <div id="gantt-sidebar-list" class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 custom-scrollbar">
-                        <!-- Dynamic Sidebar Rows rendered here -->
+                        <!-- Dynamic Sidebar Rows -->
                     </div>
                 </div>
 
                 <!-- Right Gantt Chart Viewport -->
                 <div id="gantt-viewport" class="flex-1 overflow-x-auto overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50 relative custom-scrollbar no-select">
                     <div id="gantt-container" class="min-h-full relative flex flex-col">
-                        <!-- Timeline Header (Months / Weeks / Days) -->
+                        <!-- Timeline Header -->
                         <div id="gantt-header" class="sticky top-0 z-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex flex-col flex-none shadow-sm">
-                            <div id="gantt-header-top" class="flex h-7 border-b border-slate-100 dark:border-slate-700/50 text-xs font-bold text-slate-600 dark:text-slate-300">
-                                <!-- Rendered dynamically -->
-                            </div>
-                            <div id="gantt-header-bottom" class="flex h-7 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                                <!-- Rendered dynamically -->
-                            </div>
+                            <div id="gantt-header-top" class="flex h-7 border-b border-slate-100 dark:border-slate-700/50 text-xs font-bold text-slate-600 dark:text-slate-300"></div>
+                            <div id="gantt-header-bottom" class="flex h-7 text-[11px] font-medium text-slate-500 dark:text-slate-400"></div>
                         </div>
 
-                        <!-- Timeline Body with Grid and Task Bars -->
+                        <!-- Timeline Body -->
                         <div id="gantt-body" class="flex-1 relative min-h-[400px]">
-                            <!-- Background Grid Lines -->
                             <div id="gantt-grid" class="absolute inset-0 pointer-events-none flex"></div>
-                            
-                            <!-- Task Bars Container -->
-                            <div id="gantt-rows" class="relative z-10">
-                                <!-- Dynamic Gantt Rows and Bars -->
-                            </div>
+                            <div id="gantt-rows" class="relative z-10"></div>
                         </div>
                     </div>
                 </div>
@@ -205,9 +213,7 @@
                     </h2>
                     <span class="text-xs text-slate-500 dark:text-slate-400">Drag & Drop zum Sortieren nutzen</span>
                 </div>
-                <div id="task-list-container" class="divide-y divide-slate-100 dark:divide-slate-700/50">
-                    <!-- Dynamic List View Rendered Here -->
-                </div>
+                <div id="task-list-container" class="divide-y divide-slate-100 dark:divide-slate-700/50"></div>
             </div>
         </div>
     </main>
@@ -234,7 +240,7 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Titel der Aufgabe *</label>
-                    <input type="text" id="task-title-input" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <input type="text" id="task-title-input" required placeholder="z. B. Website Redesign Launch" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -260,12 +266,13 @@
                         <select id="task-status-input" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
                             <option value="OPEN">Offen</option>
                             <option value="IN_PROGRESS">In Bearbeitung</option>
+                            <option value="WAIT">warte auf andere</option>
                             <option value="COMPLETED">Erledigt</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Subtasks Management Section in Task Modal -->
+                <!-- Subtasks Management Section -->
                 <div class="pt-3 border-t border-slate-200 dark:border-slate-700">
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Unteraufgaben (mit eigenem Datum)</label>
@@ -273,10 +280,7 @@
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i> Unteraufgabe hinzufügen
                         </button>
                     </div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-2">Maus/Grip-Handle nutzen, um Unteraufgaben vor dem Speichern umzusortieren.</p>
-                    <div id="modal-subtask-list" class="space-y-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
-                        <!-- Subtask items rendered dynamically inside modal -->
-                    </div>
+                    <div id="modal-subtask-list" class="space-y-2 max-h-52 overflow-y-auto p-1 custom-scrollbar"></div>
                 </div>
 
                 <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
@@ -307,7 +311,6 @@
             </div>
 
             <div class="p-6 space-y-4">
-                <!-- Add New Member -->
                 <form id="form-add-member" class="flex gap-2">
                     <input type="text" id="member-name-input" required placeholder="Name des Mitarbeiters" class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
                     <button type="submit" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-1">
@@ -316,11 +319,7 @@
                 </form>
 
                 <p class="text-xs text-slate-500">Mitarbeiter per Drag & Drop (Anfasser ⋮⋮) verschieben.</p>
-
-                <!-- Members Reorderable List -->
-                <div id="team-members-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                    <!-- Rendered dynamically -->
-                </div>
+                <div id="team-members-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar"></div>
             </div>
         </div>
     </div>
@@ -346,13 +345,13 @@
         </div>
     </div>
 
-    <!-- APPLICATION JAVASCRIPT LOGIC -->
+    <!-- APPLICATION LOGIC -->
     <script>
         const STORAGE_KEY = 'TASKFLOW_GANTT_PRO_DATA_V3';
 
         let appState = {
-            viewMode: 'days', // 'days' | 'weeks' | 'months'
-            activeTab: 'gantt', // 'gantt' | 'list'
+            viewMode: 'days',
+            activeTab: 'gantt',
             filterSearch: '',
             filterMember: 'ALL',
             filterStatus: 'ALL',
@@ -401,6 +400,12 @@
                 }
             ]
         };
+
+        // File System Access API State
+        let fileHandle = null;
+        let isAutoSaveEnabled = false;
+        let autoSaveInterval = null;
+        let lastSaveTime = null;
 
         let confirmAction = null;
 
@@ -480,6 +485,7 @@
             return Math.round((doneCount / task.subtasks.length) * 100);
         }
 
+        // LocalStorage save & auto-trigger file save
         function saveState() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -489,6 +495,10 @@
                 }));
             } catch (e) {
                 console.error("Local storage save error:", e);
+            }
+
+            if (isAutoSaveEnabled && fileHandle) {
+                performFileAutoSave();
             }
         }
 
@@ -503,6 +513,115 @@
                 }
             } catch (e) {
                 console.error("Error loading state:", e);
+            }
+        }
+
+        // ==========================================
+        // FILE SYSTEM ACCESS API AUTO-BACKUP
+        // ==========================================
+        async function setupAutoSaveFilePicker() {
+            if (!('showSaveFilePicker' in window)) {
+                showConfirmModal(
+                    'Nicht unterstützt',
+                    'Ihr Browser unterstützt die direkte Dateisicherung (File System Access API) nicht direkt. Nutzen Sie stattdessen den manuellen Export-Button oben.',
+                    () => {}
+                );
+                return;
+            }
+
+            try {
+                const options = {
+                    suggestedName: `aufgaben_backup_${new Date().toISOString().split('T')[0]}.json`,
+                    types: [{
+                        description: 'JSON Sicherungsdatei',
+                        accept: { 'application/json': ['.json'] },
+                    }],
+                };
+
+                fileHandle = await window.showSaveFilePicker(options);
+                isAutoSaveEnabled = true;
+
+                updateBackupUI();
+                startAutoSaveTimer();
+                await performFileAutoSave();
+
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error("Fehler beim Erstellen der Sicherungsdatei:", err);
+                }
+            }
+        }
+
+        async function performFileAutoSave() {
+            if (!fileHandle || !isAutoSaveEnabled) return;
+
+            try {
+                const writable = await fileHandle.createWritable();
+                const dataToSave = JSON.stringify({
+                    members: appState.members,
+                    tasks: appState.tasks,
+                    viewMode: appState.viewMode,
+                    lastExported: new Date().toISOString()
+                }, null, 2);
+
+                await writable.write(dataToSave);
+                await writable.close();
+
+                lastSaveTime = new Date();
+                updateBackupUI();
+            } catch (err) {
+                console.error("Automatisches Speichern fehlgeschlagen:", err);
+                // Switch dot to amber or red on failure
+                const dot = document.getElementById('backup-status-dot');
+                if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+            }
+        }
+
+        function startAutoSaveTimer() {
+            if (autoSaveInterval) clearInterval(autoSaveInterval);
+            // Timer checks and writes every 30 seconds
+            autoSaveInterval = setInterval(() => {
+                if (isAutoSaveEnabled && fileHandle) {
+                    performFileAutoSave();
+                }
+            }, 30000);
+        }
+
+        function toggleAutoSave() {
+            if (!fileHandle) {
+                setupAutoSaveFilePicker();
+                return;
+            }
+
+            isAutoSaveEnabled = !isAutoSaveEnabled;
+            if (isAutoSaveEnabled) {
+                startAutoSaveTimer();
+                performFileAutoSave();
+            }
+            updateBackupUI();
+        }
+
+        function updateBackupUI() {
+            const dot = document.getElementById('backup-status-dot');
+            const text = document.getElementById('backup-status-text');
+            const setupBtn = document.getElementById('btn-setup-backup');
+
+            if (fileHandle && isAutoSaveEnabled) {
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+                const timeStr = lastSaveTime ? lastSaveTime.toLocaleTimeString('de-DE') : 'soeben';
+                text.textContent = `${fileHandle.name} • Gesichert: ${timeStr}`;
+                setupBtn.textContent = 'Datei ändern';
+                setupBtn.className = 'ml-1 px-2 py-0.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-semibold rounded text-[11px] transition';
+            } else if (fileHandle && !isAutoSaveEnabled) {
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+                text.textContent = `Auto-Backup: Pausiert (${fileHandle.name})`;
+                setupBtn.textContent = 'Aktivieren';
+                setupBtn.className = 'ml-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded text-[11px] transition';
+            } else {
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-400';
+                text.textContent = 'Auto-Backup: Nicht eingerichtet';
+                setupBtn.textContent = 'Pfad wählen';
+                setupBtn.className = 'ml-1 px-2 py-0.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded text-[11px] transition shadow-2xs';
             }
         }
 
@@ -1009,6 +1128,8 @@
                 const statusBadges = {
                     'OPEN': '<span class="px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded-full">Offen</span>',
                     'IN_PROGRESS': '<span class="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 rounded-full">In Bearbeitung</span>',
+		    'WAIT': '<span class="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 rounded-full">warte auf andere</span>',
+
                     'COMPLETED': '<span class="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-full">Erledigt</span>'
                 };
 
@@ -1348,7 +1469,7 @@
         });
 
         // ==========================================
-        // HIGHEST z-index (z-[60]) SAFETY CONFIRMATION MODAL
+        // HIGH z-index (z-[60]) SAFETY CONFIRMATION MODAL
         // ==========================================
         function showConfirmModal(title, message, onConfirm) {
             document.getElementById('confirm-title').textContent = title;
@@ -1443,6 +1564,10 @@
             document.getElementById('modal-task-cancel').addEventListener('click', closeTaskModal);
             document.getElementById('modal-team-close').addEventListener('click', closeTeamModal);
             document.getElementById('btn-add-subtask-modal').addEventListener('click', () => addSubtaskInputRow());
+
+            // Backup Listeners
+            document.getElementById('btn-setup-backup').addEventListener('click', setupAutoSaveFilePicker);
+            document.getElementById('btn-toggle-backup').addEventListener('click', toggleAutoSave);
 
             document.getElementById('btn-theme-toggle').addEventListener('click', () => {
                 document.documentElement.classList.toggle('dark');
