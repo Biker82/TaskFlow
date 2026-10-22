@@ -37,12 +37,14 @@ Da es sich um eine HTML-Datei handelt, werden die Eintragungen nicht gespeichert
 
 Zum Speichern gibt es eine Export-/ Import-Funktion!
 
+In den Browsern Chrome, Edge und Opera funktioniert eine automatische Sicherung in eine JSON-Datei (alle 30 Sekunden), wenn man einmal nach dem Start Pfad und Datei ausgewählt hat. Da die Browser Safari und Firefox nicht File System Access API unterstützen, muss die Export-Funktion zum Sichern verwendet werden. 
+
 
 ## To Do's ##
 An der Anwendung kann noch einiges verbessert werden:
 
-- **bessere Speicher-Funktion**
-Eine automatische Sicherung (alle 30 Sekunden) kommt demnächst. Hierbei werden die Einträge in eine übersichtliche JSON-Datei gespeichert.
+- **bessere Speichern-Funktion**
+- Ergänzen des Speicherns im Origin Private File System (OPFS) - Format, wenn Safari oder Firefox verwendet wird 
 - Rolle des Bearbeiters im Team eingeben
 - Farbe des Bearbeiters ändern
 - Ansicht "Monat" verbessern
