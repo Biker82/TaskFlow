@@ -50,7 +50,12 @@ An der Anwendung kann noch einiges verbessert werden:
 - Ansicht "Monat" verbessern
 - Druck-Layout-Ansicht verändern
 
+--------------------------------------------
 
 **Ich freue mich auf Mitarbeit!**
 
+--------------------------------------------
   
+## Versionen ##
+- 9.2  Basisversion
+- 9.6  Einfügen von Autosave für File System Access API (Edge)
