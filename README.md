@@ -8,6 +8,7 @@
 ![TaskFlow_Screenshot1.jpg](TaskFlow_Screenshot1.jpg)
 ![TaskFlow_Screenshot2.jpg](TaskFlow_Screenshot2.jpg)
 ![TaskFlow_Screenshot3.jpg](TaskFlow_Screenshot3.jpg)
+![TaskFlow_Screenshot4.jpg](TaskFlow_Screenshot4.jpg)
 
 Bei vielen Aufgaben ist es schwer, den Überblick zu behalten. Vor allem, wenn man ein Team leitet.
 Es gibt zahlreiche Software dafür auf dem Markt. Mir waren alle zu unübersichtlich, zu umfangreich, zu teuer und ohne Datensicherheit. Da ich nicht fündig geworden bin, habe ich für mich mit Google Gemini 3 eine eigene App erstellt.
@@ -30,24 +31,17 @@ Einfach **TaskFlow.html** herunterladen und mit dem Browser öffnen.
 - Aufgaben nach Status filtern
 - Dark Mode
 
-
-
-**WICHTIG**: 
-Da es sich um eine HTML-Datei handelt, werden die Eintragungen nicht gespeichert!
-
-Zum Speichern gibt es eine Export-/ Import-Funktion!
-
-In den Browsern Chrome, Edge und Opera funktioniert eine automatische Sicherung in eine JSON-Datei (alle 30 Sekunden), wenn man einmal nach dem Start Pfad und Datei ausgewählt hat. Da die Browser Safari und Firefox nicht File System Access API unterstützen, muss die Export-Funktion zum Sichern verwendet werden. 
-
-
-## To Do's ##
-An der Anwendung kann noch einiges verbessert werden:
-
-- **bessere Speichern-Funktion**
-- Ergänzen des Speicherns im Origin Private File System (OPFS) - Format, wenn Safari oder Firefox verwendet wird 
-- Rolle des Bearbeiters im Team eingeben
+## Version 11 ##
+- Kanban-Ansicht für Unteraufgaben ergänzt
+- die Eingaben werden nun automatisch alle 30 Sekunden im lokalen Ordner des Users / Browsers gesichert
+- Auswahl Rolle des Bearbeiters im Team ergänzt
 - Farbe des Bearbeiters ändern
-- Ansicht "Monat" verbessern
+- Ansicht "Monat" verbessert
+- Ansicht Quartal ergänzt
+
+ ## To Do's ##
+An der Anwendung kann noch verbessert werden:
+
 - Zoom in Gantt-Diagramm
 - Druck-Layout-Ansicht verändern
 
@@ -57,6 +51,6 @@ An der Anwendung kann noch einiges verbessert werden:
 
 --------------------------------------------
   
-## Versionen ##
+## Alte Versionen ##
 - 9.2  Basisversion
 - 9.6  Einfügen von Autosave für File System Access API (Edge)
