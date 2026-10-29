@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow  (c) Tobias Schunn</title>
+    <!-- VERSION 11.4 --> 
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                            950: '#172554'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Scrollbars */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.35); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.55); }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.3); }
+
+        /* Drag & Drop Visual Feedback Classes */
+        .dragging-item { opacity: 0.4 !important; transform: scale(0.98); }
+        .drop-indicator-top { box-shadow: inset 0 3px 0 0 #2563eb !important; }
+        .drop-indicator-bottom { box-shadow: inset 0 -3px 0 0 #2563eb !important; }
+        .kanban-col-dragover { background-color: rgba(59, 130, 246, 0.08) !important; border-color: #3b82f6 !important; }
+    </style>
+</head>
+<body class="h-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 flex flex-col overflow-hidden font-sans select-none">
+
+    <!-- TOP HEADER -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 lg:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20 shadow-xs">
+        <div class="flex items-center space-x-3">
+            <div class="bg-brand-600 text-white p-2 rounded-xl shadow-md flex items-center justify-center">
+                <i data-lucide="gantt-chart" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-base lg:text-lg font-bold leading-tight tracking-tight">TaskFlow 11</h1>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Open-Source  (c) Tobias Schunn</p>
+            </div>
+        </div>
+
+        <!-- Toolbar Center: Main View Switcher (Gantt <-> Kanban) + Timeline Controls -->
+        <div class="flex items-center space-x-3 flex-wrap">
+            <!-- Primary View Switcher: Gantt vs. Kanban -->
+            <div class="flex bg-slate-100 dark:bg-slate-700/90 p-1 rounded-xl border border-slate-200/80 dark:border-slate-600/60 shadow-2xs">
+                <button onclick="switchMainView('gantt')" id="btn-main-gantt" class="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition">
+                    <i data-lucide="gantt-chart-square" class="w-4 h-4"></i>
+                    <span>Gantt-Ansicht</span>
+                </button>
+                <button onclick="switchMainView('kanban')" id="btn-main-kanban" class="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition">
+                    <i data-lucide="kanban" class="w-4 h-4"></i>
+                    <span>Kanban-Ansicht</span>
+                </button>
+            </div>
+
+            <!-- Gantt-Specific Controls (Hidden when in Kanban View) -->
+            <div id="gantt-toolbar-controls" class="flex items-center space-x-2.5 flex-wrap">
+                <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+                <div class="flex bg-slate-100 dark:bg-slate-700/80 p-1 rounded-xl border border-slate-200/60 dark:border-slate-600/50">
+                    <button onclick="changeViewMode('day')" id="btn-view-day" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition">Tag</button>
+                    <button onclick="changeViewMode('week')" id="btn-view-week" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition">Woche</button>
+                    <button onclick="changeViewMode('month')" id="btn-view-month" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition">Monat</button>
+                    <button onclick="changeViewMode('quarter')" id="btn-view-quarter" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition">Quartal</button>
+                </div>
+
+                <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-700/80 rounded-xl p-1 border border-slate-200/60 dark:border-slate-600/50">
+                    <button onclick="navigateTimeline(-1)" class="p-1 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Zeitraum zurück"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <button onclick="resetTimelineToToday()" class="px-2.5 py-1 text-xs font-semibold hover:bg-white dark:hover:bg-slate-600 rounded-lg transition">Heute</button>
+                    <button onclick="navigateTimeline(1)" class="p-1 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Zeitraum vor"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar Right: Actions & Theme -->
+        <div class="flex items-center space-x-2">
+            <button onclick="openEmployeeModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-xs font-semibold rounded-xl transition">
+                <i data-lucide="users" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
+                <span>Team</span>
+            </button>
+            <button onclick="openTaskModal()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-xs transition">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Neue Aufgabe</span>
+            </button>
+
+            <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+            <button onclick="exportDataJSON()" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition" title="Manueller JSON-Export (Backup)"><i data-lucide="download" class="w-4 h-4"></i></button>
+            <label class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition cursor-pointer" title="JSON-Datei importieren">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <input type="file" accept=".json" onchange="importDataJSON(event)" class="hidden">
+            </label>
+            <button onclick="toggleDarkMode()" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition" title="Darstellung (Hell/Dunkel) umschalten">
+                <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- FILTER & SEARCH BAR -->
+    <div class="bg-white dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 px-4 lg:px-6 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10 text-xs">
+        <div class="flex items-center space-x-2.5 flex-1 max-w-2xl">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+                <input type="text" id="filter-search" oninput="renderApp()" placeholder="Aufgaben, Unteraufgaben, Mitarbeiter oder Rollen suchen..." class="w-full pl-9 pr-3 py-1.5 bg-slate-100 dark:bg-slate-700/80 border border-transparent focus:border-brand-500 rounded-lg focus:outline-none text-xs">
+            </div>
+            <select id="filter-employee" onchange="renderApp()" class="bg-slate-100 dark:bg-slate-700/80 border border-transparent focus:border-brand-500 rounded-lg px-3 py-1.5 focus:outline-none">
+                <option value="">Alle Mitarbeiter</option>
+            </select>
+            <select id="filter-status" onchange="renderApp()" class="bg-slate-100 dark:bg-slate-700/80 border border-transparent focus:border-brand-500 rounded-lg px-3 py-1.5 focus:outline-none">
+                <option value="">Alle Status</option>
+                <option value="Offen">Offen</option>
+                <option value="In Bearbeitung">In Bearbeitung</option>
+                <option value="Erledigt">Erledigt</option>
+            </select>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <span id="workspace-hint-text" class="text-[11px] text-slate-400 hidden xl:inline-flex items-center gap-1">
+                <i data-lucide="move-horizontal" class="w-3.5 h-3.5"></i> Balken in der Zeitleiste ziehen zum Verschieben / Ränder ziehen für Dauer
+            </span>
+            <button onclick="clearCompletedTasks()" class="px-2.5 py-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg font-semibold transition flex items-center space-x-1">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Erledigte löschen</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- WORKSPACE 1: GANTT VIEW (SIDEBAR + TIMELINE) -->
+    <div id="gantt-workspace" class="flex-1 flex overflow-hidden relative">
+        
+        <!-- LEFT SIDEBAR: TASK & SUBTASK LIST (Widened w-[600px] for full readability) -->
+        <div class="w-[600px] xl:w-[650px] bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0 z-10 shadow-xs">
+            <!-- Table Header (h-12 to match 2-row timeline headers) -->
+            <div class="h-12 bg-slate-50 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 px-3 flex items-center text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+                <div class="w-8">Sort.</div>
+                <div class="flex-1 px-2">Aufgabe / Unteraufgabe</div>
+                <div class="w-48 text-center">Bearbeiter & Rolle</div>
+                <div class="w-24 text-center">Status</div>
+                <div class="w-14 text-right">Aktion</div>
+            </div>
+            <!-- Sidebar Scrollable Content (Synchronized with Gantt Viewport) -->
+            <div id="gantt-sidebar-list" class="flex-1 overflow-y-auto custom-scrollbar" onscroll="syncScrollFromSidebar(this)">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- RIGHT TIMELINE: GANTT CHART -->
+        <div class="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+            <!-- Timeline Header (Synchronized horizontal scroll via transform) -->
+            <div id="gantt-timeline-header" class="h-12 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex shrink-0 overflow-hidden select-none">
+                <!-- Injected via JS -->
+            </div>
+            <!-- Timeline Viewport (Synchronized vertical & horizontal scroll) -->
+            <div id="gantt-viewport" class="flex-1 overflow-auto relative select-none custom-scrollbar" onscroll="syncScrollFromViewport(this)">
+                <div id="gantt-canvas-content" class="relative min-h-full">
+                    <!-- Grid columns and bars injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORKSPACE 2: KANBAN BOARD VIEW (MAIN TASKS AS CATEGORIES, SUBTASKS AS DRAGGABLE CARDS) -->
+    <div id="kanban-workspace" class="flex-1 hidden flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
+        <!-- Category Selector Bar (Main Tasks as Selectable Overarching Categories) -->
+        <div class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 lg:px-6 py-3 shrink-0 shadow-2xs">
+            <div id="kanban-category-bar" class="flex flex-col gap-2.5 max-w-7xl mx-auto">
+                <!-- Category Tabs & Dropdown injected via JS -->
+            </div>
+            <div id="kanban-category-banner" class="max-w-7xl mx-auto mt-2.5 empty:mt-0">
+                <!-- Active Category Details Banner injected via JS -->
+            </div>
+        </div>
+
+        <!-- Kanban Columns Container (Draggable Subtask Cards) -->
+        <div class="flex-1 overflow-x-auto overflow-y-hidden p-4 lg:p-6 custom-scrollbar">
+            <div id="kanban-board-container" class="h-full grid grid-cols-1 md:grid-cols-3 gap-5 min-w-[900px] max-w-7xl mx-auto">
+                <!-- 3 Columns (Offen, In Bearbeitung, Erledigt) for Subtasks injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1: TASK CREATE / EDIT (z-50) -->
+    <div id="task-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
+                <h3 id="task-modal-title" class="font-bold text-base text-slate-900 dark:text-white">Neue Aufgabe erstellen</h3>
+                <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+                <input type="hidden" id="edit-task-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Aufgabentitel *</label>
+                    <input type="text" id="task-title-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="z.B. Statikprüfung & Rohbauplanung">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Startdatum *</label>
+                        <input type="date" id="task-start-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Enddatum *</label>
+                        <input type="date" id="task-end-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Hauptverantwortlicher (Bearbeiter)</label>
+                        <select id="task-assignee-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <!-- Injected -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Status</label>
+                        <select id="task-status-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="Offen">Offen</option>
+                            <option value="In Bearbeitung">In Bearbeitung</option>
+                            <option value="Erledigt">Erledigt</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- SUBTASKS SECTION WITH ASSIGNEE, DATES & DRAG-AND-DROP REORDERING -->
+                <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Unteraufgaben (Subtasks mit Bearbeiter & Zeitraum)</label>
+                            <p class="text-[11px] text-slate-400">Reihenfolge per Drag & Drop (⋮⋮) verschiebbar</p>
+                        </div>
+                        <button type="button" onclick="addSubtaskField()" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/60 dark:hover:bg-brand-900 text-brand-600 dark:text-brand-300 rounded-lg text-xs font-semibold flex items-center space-x-1 transition">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Unteraufgabe hinzufügen</span>
+                        </button>
+                    </div>
+                    <div id="subtasks-container" class="space-y-2.5 max-h-64 overflow-y-auto p-1 custom-scrollbar">
+                        <!-- Subtask rows injected here -->
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <button id="task-delete-btn" onclick="deleteTaskFromModal()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold transition hidden flex items-center gap-1.5">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Aufgabe löschen
+                </button>
+                <div class="flex items-center space-x-2 ml-auto">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold rounded-xl transition">Abbrechen</button>
+                    <button type="button" onclick="saveTaskFromModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-xs transition">Aufgabe speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1B: DEDICATED SUBTASK CREATE / EDIT FOR KANBAN (z-50) -->
+    <div id="subtask-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="check-square" class="w-5 h-5 text-brand-600"></i>
+                    <h3 id="subtask-modal-title" class="font-bold text-base text-slate-900 dark:text-white">Unteraufgabe bearbeiten</h3>
+                </div>
+                <button onclick="closeSubtaskModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="edit-subtask-id">
+                <input type="hidden" id="edit-subtask-orig-parent">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Übergeordnete Aufgabe (Kategorie) *</label>
+                    <select id="subtask-parent-input" onchange="onSubtaskParentChange()" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <!-- Injected via JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Name der Unteraufgabe *</label>
+                    <input type="text" id="subtask-title-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="z.B. Statikberechnung prüfen">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Startdatum *</label>
+                        <input type="date" id="subtask-start-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Enddatum *</label>
+                        <input type="date" id="subtask-end-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Bearbeiter</label>
+                        <select id="subtask-assignee-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <!-- Injected via JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">Status im Kanban</label>
+                        <select id="subtask-status-input" class="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="Offen">Offen</option>
+                            <option value="In Bearbeitung">In Bearbeitung</option>
+                            <option value="Erledigt">Erledigt</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <button id="subtask-delete-btn" type="button" onclick="deleteSubtaskFromModal()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold transition hidden flex items-center gap-1.5">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Löschen
+                </button>
+                <div class="flex items-center space-x-2 ml-auto">
+                    <button type="button" onclick="closeSubtaskModal()" class="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold rounded-xl transition">Abbrechen</button>
+                    <button type="button" onclick="saveSubtaskFromModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-xs transition">Unteraufgabe speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: EMPLOYEE & TEAM MANAGEMENT (z-50) -->
+    <div id="employee-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-brand-600"></i>
+                    <h3 class="font-bold text-base text-slate-900 dark:text-white">Team</h3>
+                </div>
+                <button onclick="closeEmployeeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+                <!-- Add new employee form -->
+                <div class="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">Neues Teammitglied anlegen</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <input type="text" id="new-emp-name" placeholder="Name (z.B. Max Mustermann)..." class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <input type="text" id="new-emp-role" placeholder="Rolle im Team (z.B. Bauingenieur)..." class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-500">Kennfarbe:</span>
+                            <input type="color" id="new-emp-color" value="#3b82f6" class="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer bg-transparent p-0.5">
+                        </div>
+                        <button onclick="addEmployee()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-2xs">
+                            <i data-lucide="user-plus" class="w-4 h-4"></i> Mitarbeiter hinzufügen
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Reihenfolge per Drag & Drop (⋮⋮) verschieben</span>
+                    <span>Name & Rolle direkt klickbar</span>
+                </div>
+                <!-- Employee List with Drag & Drop -->
+                <div id="employee-list-container" class="space-y-2">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                <button onclick="closeEmployeeModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl transition">Fertig</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CONFIRMATION DIALOG (z-[60] TO ALWAYS STAY IN FRONT OF EMPLOYEE/TASK MODALS) -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/75 backdrop-blur-xs z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-sm p-6 space-y-4">
+            <div class="flex items-center space-x-3 text-rose-600 dark:text-rose-500">
+                <div class="p-2.5 bg-rose-100 dark:bg-rose-950/60 rounded-full shrink-0">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h3 id="confirm-title" class="font-bold text-base text-slate-900 dark:text-white">Bestätigung erforderlich</h3>
+            </div>
+            <p id="confirm-message" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Möchten Sie diesen Eintrag wirklich löschen?</p>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeConfirmModal(false)" class="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold rounded-xl transition">Abbrechen</button>
+                <button id="confirm-yes-btn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-xs transition">Endgültig löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING TOOLTIP FOR GANTT HOVER, DRAG & RESIZE -->
+    <div id="gantt-tooltip" class="fixed pointer-events-none bg-slate-900/95 text-white text-[11px] px-3 py-2 rounded-xl shadow-xl border border-slate-700 z-[70] hidden transition-opacity opacity-0 flex flex-col gap-0.5 max-w-sm"></div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[80] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        // --- HELPER: OFFSET DATE ---
+        function getOffsetDate(daysOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            return d.toISOString().split('T')[0];
+        }
+
+        // --- ESCAPE HTML FOR SAFE ATTRIBUTES & TOOLTIPS ---
+        function escapeQuotes(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/'/g, "&#39;").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // --- FORMAT GERMAN DATE ---
+        function formatDateDE(dateStr) {
+            if (!dateStr) return '—';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+
+        // --- APPLICATION STATE ---
+        let state = {
+            mainView: 'gantt', // 'gantt' or 'kanban'
+            selectedKanbanCategory: 'all', // 'all' or specific main task ID
+            viewMode: 'month', // 'day', 'week', 'month', 'quarter'
+            timelineOffsetDate: new Date(),
+            darkMode: false,
+            employees: [
+                { id: 'e1', name: 'Anna Schmidt', role: 'Projektleiterin', color: '#2563eb', order: 0 },
+                { id: 'e2', name: 'Markus Weber', role: 'Bauingenieur', color: '#059669', order: 1 },
+                { id: 'e3', name: 'Sarah Becker', role: 'Architektin', color: '#7c3aed', order: 2 },
+                { id: 'e4', name: 'Lukas Hoffmann', role: 'Statiker & CAD', color: '#ea580c', order: 3 }
+            ],
+            tasks: [
+                {
+                    id: 't1',
+                    title: 'Infrastruktur & Rohbauplanung Projekt A',
+                    startDate: getOffsetDate(-6),
+                    endDate: getOffsetDate(14),
+                    assignee: 'e1',
+                    status: 'In Bearbeitung',
+                    order: 0,
+                    expanded: true,
+                    subtasks: [
+                        { id: 'st1', title: 'Baugrund- & Fundamentprüfung vor Ort', startDate: getOffsetDate(-6), endDate: getOffsetDate(1), assignee: 'e2', status: 'Erledigt' },
+                        { id: 'st2', title: 'Statikberechnung Hauptgebäude & Lastenplan', startDate: getOffsetDate(2), endDate: getOffsetDate(10), assignee: 'e4', status: 'In Bearbeitung' },
+                        { id: 'st3', title: 'Freigabe der Ausführungspläne mit Bauherrn', startDate: getOffsetDate(11), endDate: getOffsetDate(14), assignee: 'e1', status: 'Offen' }
+                    ]
+                },
+                {
+                    id: 't2',
+                    title: 'Quartalsbericht & Baugenehmigung Stadtverwaltung einreichen',
+                    startDate: getOffsetDate(5),
+                    endDate: getOffsetDate(32),
+                    assignee: 'e3',
+                    status: 'Offen',
+                    order: 1,
+                    expanded: true,
+                    subtasks: [
+                        { id: 'st4', title: 'Bauantragsunterlagen bündeln & Brandschutz prüfen', startDate: getOffsetDate(5), endDate: getOffsetDate(16), assignee: 'e3', status: 'Offen' },
+                        { id: 'st5', title: 'Abstimmung mit Stadtverwaltung und Umweltbehörden', startDate: getOffsetDate(17), endDate: getOffsetDate(32), assignee: 'e1', status: 'Offen' }
+                    ]
+                },
+                {
+                    id: 't3',
+                    title: 'Vermessung & Bestandsaufnahme Baufeld Süd',
+                    startDate: getOffsetDate(-20),
+                    endDate: getOffsetDate(-8),
+                    assignee: 'e2',
+                    status: 'Erledigt',
+                    order: 2,
+                    expanded: false,
+                    subtasks: [
+                        { id: 'st6', title: 'Topografische Geländeaufnahme abschließen', startDate: getOffsetDate(-20), endDate: getOffsetDate(-14), assignee: 'e2', status: 'Erledigt' },
+                        { id: 'st7', title: 'CAD-Bestandsdaten in System importieren', startDate: getOffsetDate(-13), endDate: getOffsetDate(-8), assignee: 'e4', status: 'Erledigt' }
+                    ]
+                }
+            ]
+        };
+
+        // --- TOAST NOTIFICATIONS ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const colors = {
+                success: 'bg-emerald-600 text-white border-emerald-500',
+                warning: 'bg-amber-500 text-white border-amber-400',
+                error: 'bg-rose-600 text-white border-rose-500',
+                info: 'bg-slate-800 text-white border-slate-700'
+            };
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-lg border text-xs font-semibold flex items-center gap-2 transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3800);
+        }
+
+        // --- LOCAL STORAGE PERSISTENCE ---
+        function loadStorage() {
+            const saved = localStorage.getItem('gantt_app_state_v8') || localStorage.getItem('gantt_app_state_v7');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.employees) state.employees = parsed.employees;
+                    if (parsed.tasks) state.tasks = parsed.tasks;
+                    if (parsed.mainView) state.mainView = parsed.mainView;
+                    if (parsed.selectedKanbanCategory) state.selectedKanbanCategory = parsed.selectedKanbanCategory;
+                    if (parsed.viewMode) state.viewMode = parsed.viewMode;
+                    if (parsed.darkMode !== undefined) state.darkMode = parsed.darkMode;
+                    if (state.darkMode) document.documentElement.classList.add('dark');
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        function saveStorage() {
+            localStorage.setItem('gantt_app_state_v8', JSON.stringify({
+                mainView: state.mainView,
+                selectedKanbanCategory: state.selectedKanbanCategory,
+                viewMode: state.viewMode,
+                employees: state.employees,
+                tasks: state.tasks,
+                darkMode: state.darkMode
+            }));
+        }
+
+        // --- INIT & LIFECYCLE ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStorage();
+            resetTimelineToToday();
+            renderApp();
+            lucide.createIcons();
+        });
+
+        function toggleDarkMode() {
+            state.darkMode = !state.darkMode;
+            document.documentElement.classList.toggle('dark', state.darkMode);
+            saveStorage();
+        }
+
+        // --- MAIN VIEW SWITCHER (GANTT <-> KANBAN) ---
+        function switchMainView(view) {
+            state.mainView = view;
+            renderApp();
+        }
+
+        function updateMainViewUI() {
+            const ganttWorkspace = document.getElementById('gantt-workspace');
+            const kanbanWorkspace = document.getElementById('kanban-workspace');
+            const ganttControls = document.getElementById('gantt-toolbar-controls');
+            const btnGantt = document.getElementById('btn-main-gantt');
+            const btnKanban = document.getElementById('btn-main-kanban');
+            const hintText = document.getElementById('workspace-hint-text');
+
+            if (state.mainView === 'kanban') {
+                ganttWorkspace.classList.add('hidden');
+                kanbanWorkspace.classList.remove('hidden');
+                kanbanWorkspace.classList.add('flex');
+                ganttControls.classList.add('hidden');
+
+                btnKanban.className = 'flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition bg-brand-600 text-white shadow-xs';
+                btnGantt.className = 'flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
+                if (hintText) {
+                    hintText.innerHTML = `<i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Aufgabe oben als Kategorie wählen • Unteraufgaben per Drag & Drop zwischen den Spalten verschieben`;
+                }
+            } else {
+                kanbanWorkspace.classList.add('hidden');
+                kanbanWorkspace.classList.remove('flex');
+                ganttWorkspace.classList.remove('hidden');
+                ganttControls.classList.remove('hidden');
+
+                btnGantt.className = 'flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition bg-brand-600 text-white shadow-xs';
+                btnKanban.className = 'flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
+                if (hintText) {
+                    hintText.innerHTML = `<i data-lucide="move-horizontal" class="w-3.5 h-3.5"></i> Balken in der Zeitleiste ziehen zum Verschieben / Ränder ziehen für Dauer`;
+                }
+            }
+        }
+
+        // --- TIMELINE VIEW MODE & DATE NAVIGATION ---
+        function changeViewMode(mode) {
+            state.viewMode = mode;
+            updateViewModeUI();
+            renderApp();
+        }
+
+        function updateViewModeUI() {
+            ['day', 'week', 'month', 'quarter'].forEach(m => {
+                const btn = document.getElementById(`btn-view-${m}`);
+                if (btn) {
+                    if (m === state.viewMode) {
+                        btn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xs';
+                    } else {
+                        btn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+                    }
+                }
+            });
+        }
+
+        function resetTimelineToToday() {
+            state.timelineOffsetDate = new Date();
+            renderApp();
+            const viewport = document.getElementById('gantt-viewport');
+            if (viewport) {
+                if (state.viewMode === 'month') {
+                    const currentMonth = new Date().getMonth();
+                    viewport.scrollLeft = Math.max(0, (currentMonth - 1) * 110);
+                } else if (state.viewMode === 'quarter') {
+                    const currentMonth = new Date().getMonth();
+                    viewport.scrollLeft = Math.max(0, (currentMonth - 1) * 115);
+                } else {
+                    viewport.scrollLeft = 180;
+                }
+            }
+        }
+
+        function navigateTimeline(direction) {
+            const d = new Date(state.timelineOffsetDate);
+            if (state.viewMode === 'day') d.setDate(d.getDate() + (direction * 7));
+            else if (state.viewMode === 'week') d.setDate(d.getDate() + (direction * 28));
+            else if (state.viewMode === 'month') d.setFullYear(d.getFullYear() + (direction * 1));
+            else if (state.viewMode === 'quarter') d.setFullYear(d.getFullYear() + (direction * 1));
+            state.timelineOffsetDate = d;
+            renderApp();
+        }
+
+        // --- RENDER ROUTER ---
+        function renderApp() {
+            updateMainViewUI();
+            updateViewModeUI();
+            updateEmployeeSelects();
+            renderEmployeeList();
+            if (state.mainView === 'kanban') {
+                renderKanbanBoard();
+            } else {
+                renderSidebar();
+                renderTimelineHeader();
+                renderTimelineCanvas();
+            }
+            lucide.createIcons();
+            saveStorage();
+        }
+
+        // --- EMPLOYEE SELECTS & TEAM MODAL LIST ---
+        function updateEmployeeSelects() {
+            const filterEmp = document.getElementById('filter-employee');
+            const taskEmp = document.getElementById('task-assignee-input');
+            const currentFilter = filterEmp ? filterEmp.value : '';
+            const currentTaskAssignee = taskEmp ? taskEmp.value : '';
+
+            const sortedEmps = [...state.employees].sort((a,b) => a.order - b.order);
+            
+            if (filterEmp) {
+                filterEmp.innerHTML = '<option value="">Alle Mitarbeiter</option>' + sortedEmps.map(e => `<option value="${e.id}">${e.name} (${e.role || 'Mitarbeiter'})</option>`).join('');
+                filterEmp.value = currentFilter;
+            }
+
+            if (taskEmp) {
+                taskEmp.innerHTML = '<option value="">— Nicht zugewiesen —</option>' + sortedEmps.map(e => `<option value="${e.id}">${e.name} • ${e.role || 'Mitarbeiter'}</option>`).join('');
+                if (currentTaskAssignee) taskEmp.value = currentTaskAssignee;
+            }
+        }
+
+        function renderEmployeeList() {
+            const container = document.getElementById('employee-list-container');
+            if (!container) return;
+            const sorted = [...state.employees].sort((a,b) => a.order - b.order);
+            
+            container.innerHTML = sorted.map((emp, idx) => `
+                <div draggable="true" 
+                     ondragstart="empDragStart(event, '${emp.id}')" 
+                     ondragover="empDragOver(event)" 
+                     ondragleave="empDragLeave(event)"
+                     ondrop="empDrop(event, ${idx})"
+                     ondragend="clearDragStyles()"
+                     class="flex items-center space-x-2 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 cursor-grab active:cursor-grabbing group transition">
+                    <span class="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+                    <input type="color" value="${emp.color}" onchange="updateEmpColor('${emp.id}', this.value)" class="w-6 h-6 rounded border border-slate-200 dark:border-slate-700 cursor-pointer bg-transparent p-0 shrink-0" title="Farbe ändern">
+                    <input type="text" value="${escapeQuotes(emp.name)}" onblur="updateEmpField('${emp.id}', 'name', this.value)" placeholder="Name..." class="w-2/5 bg-white dark:bg-slate-800 border border-transparent focus:border-brand-500 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none">
+                    <input type="text" value="${escapeQuotes(emp.role || '')}" onblur="updateEmpField('${emp.id}', 'role', this.value)" placeholder="Rolle im Team..." class="flex-1 bg-white dark:bg-slate-800 border border-transparent focus:border-brand-500 text-xs text-slate-600 dark:text-slate-300 rounded-lg px-2 py-1 focus:outline-none">
+                    <button onclick="confirmDeleteEmployee('${emp.id}')" class="text-slate-400 hover:text-rose-600 p-1 transition shrink-0" title="Mitarbeiter löschen"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // --- EMPLOYEE DRAG & DROP WITH VISUAL FEEDBACK ---
+        let draggedEmpId = null;
+        function empDragStart(e, id) {
+            draggedEmpId = id;
+            e.currentTarget.classList.add('dragging-item');
+        }
+        function empDragOver(e) {
+            e.preventDefault();
+            const row = e.currentTarget;
+            const rect = row.getBoundingClientRect();
+            const isTop = (e.clientY - rect.top) < rect.height / 2;
+            row.classList.toggle('drop-indicator-top', isTop);
+            row.classList.toggle('drop-indicator-bottom', !isTop);
+        }
+        function empDragLeave(e) {
+            e.currentTarget.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        }
+        function empDrop(e, targetIdx) {
+            e.preventDefault();
+            clearDragStyles();
+            if (!draggedEmpId) return;
+            const sorted = [...state.employees].sort((a,b) => a.order - b.order);
+            const sourceIndex = sorted.findIndex(emp => emp.id === draggedEmpId);
+            if (sourceIndex === -1) return;
+            const [moved] = sorted.splice(sourceIndex, 1);
+            sorted.splice(targetIdx, 0, moved);
+            sorted.forEach((emp, i) => emp.order = i);
+            draggedEmpId = null;
+            renderApp();
+        }
+        function updateEmpColor(id, color) { const emp = state.employees.find(e => e.id === id); if(emp) { emp.color = color; renderApp(); } }
+        function updateEmpField(id, field, val) { const emp = state.employees.find(e => e.id === id); if(emp && val.trim()) { emp[field] = val.trim(); renderApp(); } }
+
+        // --- TASK & SUBTASK FILTERING ---
+        function getFilteredTasks() {
+            const searchInput = document.getElementById('filter-search');
+            const empFilterSelect = document.getElementById('filter-employee');
+            const statusFilterSelect = document.getElementById('filter-status');
+            
+            const search = searchInput ? searchInput.value.toLowerCase() : '';
+            const empFilter = empFilterSelect ? empFilterSelect.value : '';
+            const statusFilter = statusFilterSelect ? statusFilterSelect.value : '';
+
+            return [...state.tasks].sort((a,b) => a.order - b.order).filter(task => {
+                const emp = state.employees.find(e => e.id === task.assignee);
+                const empName = emp ? emp.name.toLowerCase() : '';
+                const empRole = emp && emp.role ? emp.role.toLowerCase() : '';
+                const subMatchSearch = task.subtasks.some(st => {
+                    const stEmp = state.employees.find(e => e.id === st.assignee);
+                    return st.title.toLowerCase().includes(search) ||
+                           (stEmp && stEmp.name.toLowerCase().includes(search)) ||
+                           (stEmp && stEmp.role && stEmp.role.toLowerCase().includes(search));
+                });
+
+                const matchSearch = !search || task.title.toLowerCase().includes(search) || empName.includes(search) || empRole.includes(search) || subMatchSearch;
+                const matchEmp = !empFilter || task.assignee === empFilter || task.subtasks.some(st => st.assignee === empFilter);
+                const matchStatus = !statusFilter || task.status === statusFilter;
+                return matchSearch && matchEmp && matchStatus;
+            });
+        }
+
+        // --- HELPER: RECALCULATE MAIN TASK STATUS FROM SUBTASKS ---
+        function syncParentTaskStatus(task) {
+            if (!task || !task.subtasks || task.subtasks.length === 0) return;
+            const total = task.subtasks.length;
+            const doneCount = task.subtasks.filter(s => s.status === 'Erledigt').length;
+            const inProgressCount = task.subtasks.filter(s => s.status === 'In Bearbeitung').length;
+
+            if (doneCount === total) {
+                task.status = 'Erledigt';
+            } else if (doneCount > 0 || inProgressCount > 0) {
+                task.status = 'In Bearbeitung';
+            } else {
+                task.status = 'Offen';
+            }
+        }
+
+        // --- KANBAN CATEGORY SELECTION ---
+        function selectKanbanCategory(catId) {
+            state.selectedKanbanCategory = catId;
+            renderApp();
+        }
+
+        // --- KANBAN BOARD RENDERING ---
+        function renderKanbanBoard() {
+            const categoryBar = document.getElementById('kanban-category-bar');
+            const categoryBanner = document.getElementById('kanban-category-banner');
+            const board = document.getElementById('kanban-board-container');
+            if (!board || !categoryBar || !categoryBanner) return;
+
+            const allSortedTasks = [...state.tasks].sort((a,b) => a.order - b.order);
+
+            if (state.selectedKanbanCategory !== 'all' && !allSortedTasks.some(t => t.id === state.selectedKanbanCategory)) {
+                state.selectedKanbanCategory = 'all';
+            }
+
+            const totalAllSubtasks = allSortedTasks.reduce((acc, t) => acc + t.subtasks.length, 0);
+            const doneAllSubtasks = allSortedTasks.reduce((acc, t) => acc + t.subtasks.filter(st => st.status === 'Erledigt').length, 0);
+
+            const categoryPillsHtml = allSortedTasks.map(task => {
+                const isSelected = state.selectedKanbanCategory === task.id;
+                const emp = state.employees.find(e => e.id === task.assignee);
+                const doneSub = task.subtasks.filter(st => st.status === 'Erledigt').length;
+                const totalSub = task.subtasks.length;
+                const pct = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : (task.status === 'Erledigt' ? 100 : 0);
+                const safeTitle = escapeQuotes(task.title);
+
+                return `
+                    <button onclick="selectKanbanCategory('${task.id}')"
+                            title="Kategorie (Aufgabe): ${safeTitle} (${doneSub}/${totalSub} Unteraufgaben erledigt)"
+                            class="group flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition shrink-0 max-w-[270px] ${isSelected ? 'bg-brand-600 text-white border-brand-600 shadow-xs' : 'bg-slate-50 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-brand-400'}">
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${emp ? emp.color : '#94a3b8'}"></span>
+                        <span class="truncate">${task.title}</span>
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-md font-bold shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}">${doneSub}/${totalSub}</span>
+                    </button>
+                `;
+            }).join('');
+
+            const isAllSelected = state.selectedKanbanCategory === 'all';
+
+            categoryBar.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="folder-kanban" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
+                            Übergeordnete Aufgabe (Kategorie):
+                        </span>
+                        <select onchange="selectKanbanCategory(this.value)" class="bg-slate-100 dark:bg-slate-700/80 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand-500">
+                            <option value="all" ${isAllSelected ? 'selected' : ''}>Alle Aufgaben / Kategorien (${doneAllSubtasks}/${totalAllSubtasks} Unteraufgaben)</option>
+                            ${allSortedTasks.map(t => {
+                                const dCount = t.subtasks.filter(s => s.status === 'Erledigt').length;
+                                return `<option value="${t.id}" ${state.selectedKanbanCategory === t.id ? 'selected' : ''}>${escapeQuotes(t.title)} (${dCount}/${t.subtasks.length})</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openSubtaskModal(null, state.selectedKanbanCategory !== 'all' ? state.selectedKanbanCategory : null, 'Offen')" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/60 dark:hover:bg-brand-900 text-brand-600 dark:text-brand-300 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            <span>Neue Unteraufgabe</span>
+                        </button>
+                        <button onclick="openTaskModal()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5" title="Neue übergeordnete Aufgabe (Kategorie) anlegen">
+                            <i data-lucide="folder-plus" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400"></i>
+                            <span>Neue Kategorie (Aufgabe)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    <button onclick="selectKanbanCategory('all')"
+                            class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition shrink-0 ${isAllSelected ? 'bg-brand-600 text-white border-brand-600 shadow-xs' : 'bg-slate-50 dark:bg-slate-900/70 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-brand-400'}">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        <span>Alle Kategorien</span>
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-md font-bold ${isAllSelected ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}">${doneAllSubtasks}/${totalAllSubtasks}</span>
+                    </button>
+                    ${categoryPillsHtml}
+                </div>
+            `;
+
+            if (!isAllSelected) {
+                const activeTask = allSortedTasks.find(t => t.id === state.selectedKanbanCategory);
+                if (activeTask) {
+                    const emp = state.employees.find(e => e.id === activeTask.assignee);
+                    const doneSub = activeTask.subtasks.filter(st => st.status === 'Erledigt').length;
+                    const totalSub = activeTask.subtasks.length;
+                    const progress = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : (activeTask.status === 'Erledigt' ? 100 : 0);
+                    const safeTitle = escapeQuotes(activeTask.title);
+
+                    categoryBanner.innerHTML = `
+                        <div class="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <div class="w-3 h-10 rounded-full shrink-0" style="background-color: ${emp ? emp.color : '#3b82f6'}"></div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300">Aktive Kategorie</span>
+                                        <h4 class="font-bold text-sm text-slate-900 dark:text-white truncate" title="${safeTitle}">${activeTask.title}</h4>
+                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${activeTask.status === 'Erledigt' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : activeTask.status === 'In Bearbeitung' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}">${activeTask.status}</span>
+                                    </div>
+                                    <div class="flex items-center gap-4 mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                                        <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> ${formatDateDE(activeTask.startDate)} – ${formatDateDE(activeTask.endDate)}</span>
+                                        <span class="flex items-center gap-1"><i data-lucide="user" class="w-3.5 h-3.5"></i> Hauptverantwortlich: <strong class="text-slate-700 dark:text-slate-200">${emp ? `${emp.name} (${emp.role || 'Mitarbeiter'})` : 'Unzugewiesen'}</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-4 shrink-0">
+                                <div class="w-36">
+                                    <div class="flex justify-between text-[10px] font-semibold mb-1">
+                                        <span class="text-slate-500">Kategorie-Fortschritt</span>
+                                        <span class="text-slate-800 dark:text-slate-200">${doneSub}/${totalSub} (${progress}%)</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full transition-all duration-300 ${progress === 100 ? 'bg-emerald-500' : 'bg-brand-600'}" style="width: ${progress}%"></div>
+                                    </div>
+                                </div>
+                                <button onclick="openTaskModal('${activeTask.id}')" class="px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition" title="Übergeordnete Aufgabe bearbeiten">
+                                    <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                                    <span>Kategorie bearbeiten</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    categoryBanner.innerHTML = '';
+                }
+            } else {
+                categoryBanner.innerHTML = '';
+            }
+
+            const searchInput = document.getElementById('filter-search');
+            const empFilterSelect = document.getElementById('filter-employee');
+            const statusFilterSelect = document.getElementById('filter-status');
+            
+            const search = searchInput ? searchInput.value.toLowerCase() : '';
+            const empFilter = empFilterSelect ? empFilterSelect.value : '';
+            const statusFilter = statusFilterSelect ? statusFilterSelect.value : '';
+
+            const tasksToInclude = isAllSelected
+                ? allSortedTasks
+                : allSortedTasks.filter(t => t.id === state.selectedKanbanCategory);
+
+            let subtaskItems = [];
+            tasksToInclude.forEach(parentTask => {
+                parentTask.subtasks.forEach((st, stIndex) => {
+                    const stEmp = state.employees.find(e => e.id === st.assignee);
+                    const stEmpName = stEmp ? stEmp.name.toLowerCase() : '';
+                    const stEmpRole = stEmp && stEmp.role ? stEmp.role.toLowerCase() : '';
+                    const parentTitle = parentTask.title.toLowerCase();
+
+                    const matchSearch = !search ||
+                        st.title.toLowerCase().includes(search) ||
+                        parentTitle.includes(search) ||
+                        stEmpName.includes(search) ||
+                        stEmpRole.includes(search);
+
+                    const matchEmp = !empFilter || st.assignee === empFilter || parentTask.assignee === empFilter;
+                    const matchStatus = !statusFilter || st.status === statusFilter;
+
+                    if (matchSearch && matchEmp && matchStatus) {
+                        subtaskItems.push({
+                            subtask: st,
+                            parentTask: parentTask,
+                            stIndex: stIndex
+                        });
+                    }
+                });
+            });
+
+            const columnsConfig = [
+                {
+                    status: 'Offen',
+                    title: 'Offen',
+                    subtitle: 'Offene Unteraufgaben',
+                    badgeBg: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200',
+                    topBorder: 'border-t-4 border-t-slate-400 dark:border-t-slate-500',
+                    dotColor: 'bg-slate-400'
+                },
+                {
+                    status: 'In Bearbeitung',
+                    title: 'In Bearbeitung',
+                    subtitle: 'Unteraufgaben in Arbeit',
+                    badgeBg: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300',
+                    topBorder: 'border-t-4 border-t-amber-500',
+                    dotColor: 'bg-amber-500'
+                },
+                {
+                    status: 'Erledigt',
+                    title: 'Erledigt',
+                    subtitle: 'Abgeschlossene Unteraufgaben',
+                    badgeBg: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300',
+                    topBorder: 'border-t-4 border-t-emerald-500',
+                    dotColor: 'bg-emerald-500'
+                }
+            ];
+
+            board.innerHTML = columnsConfig.map(col => {
+                const colSubtasks = subtaskItems.filter(item => item.subtask.status === col.status);
+
+                const cardsHtml = colSubtasks.length === 0 ? `
+                    <div class="flex flex-col items-center justify-center h-40 border-2 border-dashed border-slate-200 dark:border-slate-700/70 rounded-xl text-slate-400 text-xs p-4 text-center">
+                        <p class="font-medium">Keine Unteraufgaben in "${col.title}"</p>
+                        <p class="text-[11px] mt-1 opacity-75">Unteraufgabe hierher ziehen oder unten neu anlegen</p>
+                    </div>
+                ` : colSubtasks.map(item => {
+                    const { subtask, parentTask } = item;
+                    const stEmp = state.employees.find(e => e.id === subtask.assignee);
+                    const parentEmp = state.employees.find(e => e.id === parentTask.assignee);
+                    const safeSubTitle = escapeQuotes(subtask.title);
+                    const safeParentTitle = escapeQuotes(parentTask.title);
+                    const categoryColor = parentEmp ? parentEmp.color : '#3b82f6';
+
+                    return `
+                        <div draggable="true"
+                             ondragstart="kanbanSubtaskDragStart(event, '${parentTask.id}', '${subtask.id}')"
+                             ondragover="kanbanSubtaskDragOver(event)"
+                             ondragleave="kanbanSubtaskDragLeave(event)"
+                             ondrop="kanbanSubtaskDrop(event, '${parentTask.id}', '${subtask.id}', '${col.status}')"
+                             ondragend="clearDragStyles()"
+                             class="bg-white dark:bg-slate-800 rounded-xl p-3.5 shadow-xs border border-slate-200/90 dark:border-slate-700 hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 transition cursor-grab active:cursor-grabbing group flex flex-col justify-between"
+                             title="${safeSubTitle}">
+                            
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <button onclick="selectKanbanCategory('${parentTask.id}')"
+                                            title="Übergeordnete Aufgabe (Kategorie): ${safeParentTitle}"
+                                            class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:bg-brand-50 dark:hover:bg-brand-950/60 hover:text-brand-600 transition truncate max-w-[78%]">
+                                        <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${categoryColor}"></span>
+                                        <span class="truncate">${parentTask.title}</span>
+                                    </button>
+
+                                    <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                        <button onclick="openSubtaskModal('${subtask.id}', '${parentTask.id}')" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 dark:text-slate-300" title="Unteraufgabe bearbeiten">
+                                            <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button onclick="confirmDeleteSubtask('${parentTask.id}', '${subtask.id}')" class="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg text-rose-500" title="Unteraufgabe löschen">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start gap-2.5 my-1.5">
+                                    <input type="checkbox"
+                                           ${subtask.status === 'Erledigt' ? 'checked' : ''}
+                                           onchange="toggleSubtaskStatus('${parentTask.id}', '${subtask.id}')"
+                                           class="mt-0.5 rounded text-brand-600 focus:ring-brand-500 w-4 h-4 cursor-pointer shrink-0"
+                                           title="Status Erledigt umschalten">
+                                    <h4 onclick="openSubtaskModal('${subtask.id}', '${parentTask.id}')"
+                                        class="font-bold text-sm leading-snug cursor-pointer transition ${subtask.status === 'Erledigt' ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100 hover:text-brand-600 dark:hover:text-brand-400'}">
+                                        ${subtask.title}
+                                    </h4>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60">
+                                    ${stEmp ? `
+                                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white shadow-2xs truncate max-w-[60%]"
+                                             style="background-color: ${stEmp.color}"
+                                             title="Bearbeiter: ${escapeQuotes(stEmp.name)} (${escapeQuotes(stEmp.role || 'Mitarbeiter')})">
+                                            <span class="truncate">${stEmp.name}</span>
+                                            ${stEmp.role ? `<span class="opacity-85 font-normal hidden sm:inline">• ${stEmp.role}</span>` : ''}
+                                        </div>
+                                    ` : `
+                                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 italic">Kein Bearbeiter</span>
+                                    `}
+
+                                    <div class="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 font-mono shrink-0" title="Zeitraum der Unteraufgabe: ${formatDateDE(subtask.startDate)} bis ${formatDateDE(subtask.endDate)}">
+                                        <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+                                        <span>${formatDateDE(subtask.startDate).slice(0,6)} – ${formatDateDE(subtask.endDate)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const defaultParentId = state.selectedKanbanCategory !== 'all' ? `'${state.selectedKanbanCategory}'` : 'null';
+
+                return `
+                    <div class="bg-slate-200/60 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 ${col.topBorder} flex flex-col h-full overflow-hidden transition-colors"
+                         ondragover="kanbanColDragOver(event)"
+                         ondragleave="kanbanColDragLeave(event)"
+                         ondrop="kanbanColDrop(event, '${col.status}')">
+                        
+                        <div class="p-4 bg-white/70 dark:bg-slate-800/80 border-b border-slate-200/70 dark:border-slate-700/70 flex items-center justify-between shrink-0">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="w-2.5 h-2.5 rounded-full ${col.dotColor}"></span>
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <h3 class="font-bold text-sm text-slate-900 dark:text-white">${col.title}</h3>
+                                        <span class="px-2 py-0.5 text-[11px] font-bold rounded-full ${col.badgeBg}">${colSubtasks.length}</span>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400">${col.subtitle}</p>
+                                </div>
+                            </div>
+                            <button onclick="openSubtaskModal(null, ${defaultParentId}, '${col.status}')" class="p-1.5 hover:bg-slate-200/70 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition" title="Neue Unteraufgabe in '${col.title}' hinzufügen">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">
+                            ${cardsHtml}
+                        </div>
+
+                        <div class="p-3 bg-white/50 dark:bg-slate-800/50 border-t border-slate-200/60 dark:border-slate-700/60 shrink-0">
+                            <button onclick="openSubtaskModal(null, ${defaultParentId}, '${col.status}')" class="w-full py-2 px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-950/30 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 flex items-center justify-center space-x-1.5 transition">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                <span>Unteraufgabe hinzufügen</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- KANBAN SUBTASK DRAG & DROP HANDLERS ---
+        let draggedKanbanSubtask = null;
+
+        function kanbanSubtaskDragStart(e, parentTaskId, subtaskId) {
+            draggedKanbanSubtask = { parentTaskId, subtaskId };
+            e.currentTarget.classList.add('dragging-item');
+            e.stopPropagation();
+        }
+
+        function kanbanSubtaskDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const card = e.currentTarget;
+            const rect = card.getBoundingClientRect();
+            const isTop = (e.clientY - rect.top) < rect.height / 2;
+            card.classList.toggle('drop-indicator-top', isTop);
+            card.classList.toggle('drop-indicator-bottom', !isTop);
+        }
+
+        function kanbanSubtaskDragLeave(e) {
+            e.currentTarget.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        }
+
+        function kanbanSubtaskDrop(e, targetParentTaskId, targetSubtaskId, targetStatus) {
+            e.preventDefault();
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            const insertBefore = (e.clientY - rect.top) < rect.height / 2;
+            clearDragStyles();
+
+            if (!draggedKanbanSubtask) return;
+            const { parentTaskId: srcParentId, subtaskId: srcSubId } = draggedKanbanSubtask;
+            if (srcParentId === targetParentTaskId && srcSubId === targetSubtaskId) {
+                draggedKanbanSubtask = null;
+                return;
+            }
+
+            const srcTask = state.tasks.find(t => t.id === srcParentId);
+            const targetTask = state.tasks.find(t => t.id === targetParentTaskId);
+            if (!srcTask || !targetTask) return;
+
+            const srcIdx = srcTask.subtasks.findIndex(st => st.id === srcSubId);
+            if (srcIdx === -1) return;
+
+            const [movedSubtask] = srcTask.subtasks.splice(srcIdx, 1);
+            movedSubtask.status = targetStatus;
+
+            if (srcParentId === targetParentTaskId) {
+                let toIdx = targetTask.subtasks.findIndex(st => st.id === targetSubtaskId);
+                if (toIdx === -1) toIdx = targetTask.subtasks.length;
+                else if (!insertBefore) toIdx += 1;
+                targetTask.subtasks.splice(toIdx, 0, movedSubtask);
+            } else {
+                targetTask.subtasks.push(movedSubtask);
+            }
+
+            syncParentTaskStatus(srcTask);
+            draggedKanbanSubtask = null;
+            renderApp();
+        }
+
+        function kanbanColDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('kanban-col-dragover');
+        }
+
+        function kanbanColDragLeave(e) {
+            e.currentTarget.classList.remove('kanban-col-dragover');
+        }
+
+        function kanbanColDrop(e, newStatus) {
+            e.preventDefault();
+            clearDragStyles();
+            if (!draggedKanbanSubtask) return;
+
+            const { parentTaskId, subtaskId } = draggedKanbanSubtask;
+            const parentTask = state.tasks.find(t => t.id === parentTaskId);
+            if (parentTask) {
+                const subtask = parentTask.subtasks.find(st => st.id === subtaskId);
+                if (subtask && subtask.status !== newStatus) {
+                    subtask.status = newStatus;
+                    syncParentTaskStatus(parentTask);
+                    showToast(`Unteraufgabe "${subtask.title}" auf "${newStatus}" gesetzt.`, 'info');
+                }
+            }
+            draggedKanbanSubtask = null;
+            renderApp();
+        }
+
+        // --- DEDICATED SUBTASK MODAL ---
+        function openSubtaskModal(subtaskId = null, parentTaskId = null, presetStatus = 'Offen') {
+            if (state.tasks.length === 0) {
+                showToast('Bitte erstellen Sie zuerst eine übergeordnete Aufgabe (Kategorie).', 'warning');
+                openTaskModal();
+                return;
+            }
+
+            const modal = document.getElementById('subtask-modal');
+            const titleEl = document.getElementById('subtask-modal-title');
+            const deleteBtn = document.getElementById('subtask-delete-btn');
+            const parentSelect = document.getElementById('subtask-parent-input');
+            const assigneeSelect = document.getElementById('subtask-assignee-input');
+
+            const sortedTasks = [...state.tasks].sort((a,b) => a.order - b.order);
+            const effectiveParentId = parentTaskId || (state.selectedKanbanCategory !== 'all' ? state.selectedKanbanCategory : sortedTasks[0].id);
+
+            parentSelect.innerHTML = sortedTasks.map(t =>
+                `<option value="${t.id}" ${t.id === effectiveParentId ? 'selected' : ''}>${escapeQuotes(t.title)}</option>`
+            ).join('');
+
+            const sortedEmps = [...state.employees].sort((a,b) => a.order - b.order);
+            assigneeSelect.innerHTML = '<option value="">— Kein Bearbeiter —</option>' + sortedEmps.map(e =>
+                `<option value="${e.id}">${escapeQuotes(e.name)} • ${escapeQuotes(e.role || 'Mitarbeiter')}</option>`
+            ).join('');
+
+            document.getElementById('edit-subtask-id').value = subtaskId || '';
+            document.getElementById('edit-subtask-orig-parent').value = effectiveParentId || '';
+
+            const parentTask = state.tasks.find(t => t.id === effectiveParentId) || sortedTasks[0];
+
+            if (subtaskId && parentTask) {
+                const st = parentTask.subtasks.find(s => s.id === subtaskId);
+                if (st) {
+                    titleEl.textContent = 'Unteraufgabe bearbeiten';
+                    deleteBtn.classList.remove('hidden');
+                    document.getElementById('subtask-title-input').value = st.title;
+                    document.getElementById('subtask-start-input').value = st.startDate;
+                    document.getElementById('subtask-end-input').value = st.endDate;
+                    assigneeSelect.value = st.assignee || '';
+                    document.getElementById('subtask-status-input').value = st.status;
+                }
+            } else {
+                titleEl.textContent = 'Neue Unteraufgabe anlegen';
+                deleteBtn.classList.add('hidden');
+                document.getElementById('subtask-title-input').value = '';
+                document.getElementById('subtask-start-input').value = parentTask ? parentTask.startDate : getOffsetDate(0);
+                document.getElementById('subtask-end-input').value = parentTask ? parentTask.endDate : getOffsetDate(5);
+                assigneeSelect.value = parentTask && parentTask.assignee ? parentTask.assignee : (sortedEmps[0] ? sortedEmps[0].id : '');
+                document.getElementById('subtask-status-input').value = presetStatus || 'Offen';
+            }
+
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function onSubtaskParentChange() {
+            const editId = document.getElementById('edit-subtask-id').value;
+            if (editId) return;
+            const newParentId = document.getElementById('subtask-parent-input').value;
+            const parentTask = state.tasks.find(t => t.id === newParentId);
+            if (parentTask) {
+                document.getElementById('subtask-start-input').value = parentTask.startDate;
+                document.getElementById('subtask-end-input').value = parentTask.endDate;
+                if (parentTask.assignee) {
+                    document.getElementById('subtask-assignee-input').value = parentTask.assignee;
+                }
+            }
+        }
+
+        function closeSubtaskModal() {
+            document.getElementById('subtask-modal').classList.add('hidden');
+        }
+
+        function saveSubtaskFromModal() {
+            const subtaskId = document.getElementById('edit-subtask-id').value;
+            const origParentId = document.getElementById('edit-subtask-orig-parent').value;
+            const targetParentId = document.getElementById('subtask-parent-input').value;
+            const title = document.getElementById('subtask-title-input').value.trim();
+            const startDate = document.getElementById('subtask-start-input').value;
+            const endDate = document.getElementById('subtask-end-input').value;
+            const assignee = document.getElementById('subtask-assignee-input').value;
+            const status = document.getElementById('subtask-status-input').value;
+
+            if (!title) { showToast('Bitte geben Sie einen Namen für die Unteraufgabe ein.', 'warning'); return; }
+            if (endDate < startDate) { showToast('Das Enddatum darf nicht vor dem Startdatum liegen.', 'warning'); return; }
+
+            const targetTask = state.tasks.find(t => t.id === targetParentId);
+            if (!targetTask) return;
+
+            if (subtaskId) {
+                const origTask = state.tasks.find(t => t.id === origParentId);
+                if (origTask) {
+                    const stIndex = origTask.subtasks.findIndex(s => s.id === subtaskId);
+                    if (stIndex !== -1) {
+                        const [existingSt] = origTask.subtasks.splice(stIndex, 1);
+                        existingSt.title = title;
+                        existingSt.startDate = startDate;
+                        existingSt.endDate = endDate;
+                        existingSt.assignee = assignee;
+                        existingSt.status = status;
+                        targetTask.subtasks.push(existingSt);
+                        syncParentTaskStatus(origTask);
+                    }
+                }
+                showToast('Unteraufgabe aktualisiert.', 'success');
+            } else {
+                targetTask.subtasks.push({
+                    id: 'st_' + Math.random().toString(36).substring(2, 9),
+                    title,
+                    startDate,
+                    endDate,
+                    assignee,
+                    status
+                });
+                showToast('Neue Unteraufgabe hinzugefügt.', 'success');
+            }
+
+            if (startDate < targetTask.startDate) targetTask.startDate = startDate;
+            if (endDate > targetTask.endDate) targetTask.endDate = endDate;
+            syncParentTaskStatus(targetTask);
+
+            closeSubtaskModal();
+            renderApp();
+        }
+
+        function deleteSubtaskFromModal() {
+            const subtaskId = document.getElementById('edit-subtask-id').value;
+            const origParentId = document.getElementById('edit-subtask-orig-parent').value;
+            if (subtaskId && origParentId) {
+                closeSubtaskModal();
+                confirmDeleteSubtask(origParentId, subtaskId);
+            }
+        }
+
+        // --- GANTT SIDEBAR RENDERING ---
+        function renderSidebar() {
+            const container = document.getElementById('gantt-sidebar-list');
+            if (!container) return;
+            const tasks = getFilteredTasks();
+
+            if (tasks.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs">Keine Aufgaben für diesen Filter gefunden.</div>`;
+                return;
+            }
+
+            container.innerHTML = tasks.map((task, tIdx) => {
+                const emp = state.employees.find(e => e.id === task.assignee);
+                const completedSubtasks = task.subtasks.filter(st => st.status === 'Erledigt').length;
+                const totalSubtasks = task.subtasks.length;
+                const progress = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : (task.status === 'Erledigt' ? 100 : 0);
+                const safeTitle = escapeQuotes(task.title);
+                const empLabel = emp ? `${emp.name} (${emp.role || 'Mitarbeiter'})` : 'Unzugewiesen';
+                const safeEmpLabel = escapeQuotes(empLabel);
+
+                let html = `
+                    <div draggable="true"
+                         ondragstart="taskDragStart(event, '${task.id}')"
+                         ondragover="rowDragOver(event)"
+                         ondragleave="rowDragLeave(event)"
+                         ondrop="taskDrop(event, ${tIdx})"
+                         ondragend="clearDragStyles()"
+                         class="h-12 border-b border-slate-100 dark:border-slate-800 px-3 flex items-center space-x-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs group transition">
+                        
+                        <div class="cursor-grab text-slate-300 dark:text-slate-600 hover:text-slate-500 shrink-0 w-4 text-center" title="Aufgabe per Drag & Drop verschieben"><i data-lucide="grip-vertical" class="w-4 h-4 mx-auto"></i></div>
+                        
+                        <button onclick="toggleTaskExpand('${task.id}')" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 w-4 shrink-0 text-center" title="Auf- / Zuklappen">
+                            ${task.subtasks.length > 0 ? `<i data-lucide="${task.expanded ? 'chevron-down' : 'chevron-right'}" class="w-4 h-4 mx-auto"></i>` : ''}
+                        </button>
+
+                        <div class="flex-1 min-w-0 cursor-pointer px-1"
+                             onclick="openTaskModal('${task.id}')"
+                             title="${safeTitle}"
+                             onmouseenter="showTooltip(event, '${safeTitle}', '${task.startDate}', '${task.endDate}', '${safeEmpLabel}')"
+                             onmousemove="moveTooltip(event)"
+                             onmouseleave="hideTooltip()">
+                            <div class="flex items-center gap-1.5">
+                                <span class="truncate font-semibold text-slate-800 dark:text-slate-100" title="${safeTitle}">${task.title}</span>
+                                ${totalSubtasks > 0 ? `<span class="text-[10px] px-1.5 py-0.2 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded font-medium shrink-0">${completedSubtasks}/${totalSubtasks} (${progress}%)</span>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="w-48 text-center truncate px-2 shrink-0" title="${safeEmpLabel}">
+                            ${emp ? `
+                                <div class="inline-flex flex-col items-center max-w-full">
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white truncate max-w-full shadow-2xs" style="background-color: ${emp.color}">${emp.name}</span>
+                                    <span class="text-[9px] text-slate-400 truncate max-w-full leading-tight mt-0.5">${emp.role || ''}</span>
+                                </div>
+                            ` : `<span class="text-[10px] text-slate-400 italic">Unzugewiesen</span>`}
+                        </div>
+
+                        <div class="w-24 text-center shrink-0">
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${task.status === 'Erledigt' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : task.status === 'In Bearbeitung' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}">
+                                ${task.status}
+                            </span>
+                        </div>
+
+                        <div class="w-14 flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <button onclick="openTaskModal('${task.id}')" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500" title="Bearbeiten"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="confirmDeleteTask('${task.id}')" class="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded text-rose-500" title="Löschen"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                `;
+
+                if (task.expanded && task.subtasks.length > 0) {
+                    task.subtasks.forEach((st, stIdx) => {
+                        const stEmp = state.employees.find(e => e.id === st.assignee);
+                        const safeStTitle = escapeQuotes(st.title);
+                        const stEmpLabel = stEmp ? `${stEmp.name} (${stEmp.role || 'Mitarbeiter'})` : 'Kein Bearbeiter';
+                        const safeStEmpLabel = escapeQuotes(stEmpLabel);
+                        html += `
+                            <div draggable="true"
+                                 ondragstart="subtaskDragStart(event, '${task.id}', '${st.id}')"
+                                 ondragover="rowDragOver(event)"
+                                 ondragleave="rowDragLeave(event)"
+                                 ondrop="subtaskDrop(event, '${task.id}', ${stIdx})"
+                                 ondragend="clearDragStyles()"
+                                 class="h-9 bg-slate-50/80 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/50 pl-5 pr-3 flex items-center space-x-2 text-xs group/st transition">
+                                
+                                <div class="cursor-grab text-slate-300 dark:text-slate-600 hover:text-slate-500 shrink-0 w-4 text-center" title="Unteraufgabe verschieben"><i data-lucide="grip-vertical" class="w-3.5 h-3.5 mx-auto"></i></div>
+                                <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1"></i>
+                                <div class="flex-1 truncate text-slate-600 dark:text-slate-300 font-medium cursor-pointer pl-1 ${st.status === 'Erledigt' ? 'line-through opacity-60' : ''}"
+                                     onclick="openTaskModal('${task.id}')"
+                                     title="${safeStTitle}"
+                                     onmouseenter="showTooltip(event, '↳ ${safeStTitle}', '${st.startDate}', '${st.endDate}', '${safeStEmpLabel}')"
+                                     onmousemove="moveTooltip(event)"
+                                     onmouseleave="hideTooltip()">
+                                    ${st.title}
+                                </div>
+                                
+                                <div class="w-48 text-center truncate px-2 shrink-0" title="${safeStEmpLabel}">
+                                    ${stEmp ? `
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-700 dark:text-slate-300 truncate">
+                                            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${stEmp.color}"></span>
+                                            <span class="truncate">${stEmp.name}</span>
+                                        </span>
+                                    ` : `<span class="text-[10px] text-slate-400">—</span>`}
+                                </div>
+                                <div class="w-24 text-center shrink-0">
+                                    <input type="checkbox" ${st.status === 'Erledigt' ? 'checked' : ''} onchange="toggleSubtaskStatus('${task.id}', '${st.id}')" class="rounded text-brand-600 focus:ring-brand-500 w-3.5 h-3.5 cursor-pointer" title="Als erledigt markieren">
+                                </div>
+                                <div class="w-14 flex items-center justify-end space-x-1 opacity-0 group-hover/st:opacity-100 transition-opacity shrink-0">
+                                    <button onclick="confirmDeleteSubtask('${task.id}', '${st.id}')" class="p-1 hover:bg-rose-50 rounded text-rose-500" title="Unteraufgabe löschen"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                return html;
+            }).join('');
+        }
+
+        // --- TASK TOGGLE EXPAND ---
+        function toggleTaskExpand(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.expanded = !task.expanded;
+                renderApp();
+            }
+        }
+
+        // --- TASK & SUBTASK DRAG & DROP REORDERING ---
+        let draggedTaskId = null;
+        let draggedSubtaskInfo = null;
+
+        function clearDragStyles() {
+            document.querySelectorAll('.dragging-item, .drop-indicator-top, .drop-indicator-bottom, .kanban-col-dragover').forEach(el => {
+                el.classList.remove('dragging-item', 'drop-indicator-top', 'drop-indicator-bottom', 'kanban-col-dragover');
+            });
+        }
+
+        function rowDragOver(e) {
+            e.preventDefault();
+            const row = e.currentTarget;
+            const rect = row.getBoundingClientRect();
+            const isTop = (e.clientY - rect.top) < rect.height / 2;
+            row.classList.toggle('drop-indicator-top', isTop);
+            row.classList.toggle('drop-indicator-bottom', !isTop);
+        }
+
+        function rowDragLeave(e) {
+            e.currentTarget.classList.remove('drop-indicator-top', 'drop-indicator-bottom');
+        }
+
+        function taskDragStart(e, id) {
+            draggedTaskId = id;
+            draggedSubtaskInfo = null;
+            e.currentTarget.classList.add('dragging-item');
+            e.stopPropagation();
+        }
+
+        function subtaskDragStart(e, taskId, stId) {
+            draggedTaskId = null;
+            draggedSubtaskInfo = { taskId, stId };
+            e.currentTarget.classList.add('dragging-item');
+            e.stopPropagation();
+        }
+
+        function taskDrop(e, targetIdx) {
+            e.preventDefault();
+            clearDragStyles();
+            if (!draggedTaskId) return;
+            const sorted = [...state.tasks].sort((a,b) => a.order - b.order);
+            const sourceIndex = sorted.findIndex(t => t.id === draggedTaskId);
+            if (sourceIndex === -1) return;
+            const [moved] = sorted.splice(sourceIndex, 1);
+            sorted.splice(targetIdx, 0, moved);
+            sorted.forEach((t, i) => t.order = i);
+            draggedTaskId = null;
+            renderApp();
+        }
+
+        function subtaskDrop(e, taskId, targetStIdx) {
+            e.preventDefault();
+            clearDragStyles();
+            if (!draggedSubtaskInfo || draggedSubtaskInfo.taskId !== taskId) return;
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const sourceIndex = task.subtasks.findIndex(st => st.id === draggedSubtaskInfo.stId);
+            if (sourceIndex === -1) return;
+            const [moved] = task.subtasks.splice(sourceIndex, 1);
+            task.subtasks.splice(targetStIdx, 0, moved);
+            draggedSubtaskInfo = null;
+            renderApp();
+        }
+
+        function toggleSubtaskStatus(taskId, stId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const st = task.subtasks.find(s => s.id === stId);
+            if (!st) return;
+            st.status = st.status === 'Erledigt' ? 'Offen' : 'Erledigt';
+            syncParentTaskStatus(task);
+            renderApp();
+        }
+
+        // --- TIMELINE CONFIGURATION (DAY, WEEK, MULTI-YEAR MONTH & QUARTER) ---
+        function getMaxTaskYear(fallbackYear) {
+            let maxYear = fallbackYear;
+            state.tasks.forEach(t => {
+                if (t.endDate) {
+                    const y = new Date(t.endDate).getFullYear();
+                    if (!isNaN(y) && y > maxYear) maxYear = y;
+                }
+                if (t.subtasks) {
+                    t.subtasks.forEach(st => {
+                        if (st.endDate) {
+                            const sy = new Date(st.endDate).getFullYear();
+                            if (!isNaN(sy) && sy > maxYear) maxYear = sy;
+                        }
+                    });
+                }
+            });
+            return maxYear;
+        }
+
+        function getTimelineConfig() {
+            const baseDate = new Date(state.timelineOffsetDate);
+            baseDate.setHours(0,0,0,0);
+            let columns = [];
+            let colWidth = 42;
+            let daysPerColumn = 1;
+
+            if (state.viewMode === 'day') {
+                colWidth = 48;
+                daysPerColumn = 1;
+                for (let i = -10; i <= 45; i++) {
+                    const d = new Date(baseDate);
+                    d.setDate(d.getDate() + i);
+                    columns.push({
+                        date: d,
+                        label: d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit' }),
+                        monthName: d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+                        isWeekend: d.getDay() === 0 || d.getDay() === 6,
+                        isToday: isSameDay(d, new Date()),
+                        isFirstOfMonth: d.getDate() === 1,
+                        monthIndex: d.getMonth()
+                    });
+                }
+            } else if (state.viewMode === 'week') {
+                colWidth = 98;
+                daysPerColumn = 7;
+                for (let i = -4; i <= 24; i++) {
+                    const d = new Date(baseDate);
+                    d.setDate(d.getDate() + (i * 7));
+                    const weekNum = getISOWeek(d);
+                    const endW = new Date(d);
+                    endW.setDate(endW.getDate() + 6);
+                    columns.push({
+                        date: d,
+                        label: `KW ${weekNum}`,
+                        subLabel: `${d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} – ${endW.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}`,
+                        monthName: d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+                        monthIndex: d.getMonth()
+                    });
+                }
+            } else if (state.viewMode === 'month') {
+                colWidth = 110;
+                daysPerColumn = 30.4375;
+                const startYear = baseDate.getFullYear();
+                const maxTaskYear = getMaxTaskYear(startYear);
+                const endYear = Math.max(startYear + 4, maxTaskYear + 1);
+                const nowYear = new Date().getFullYear();
+                const nowMonth = new Date().getMonth();
+                
+                for (let y = startYear; y <= endYear; y++) {
+                    for (let m = 0; m < 12; m++) {
+                        const d = new Date(y, m, 1);
+                        columns.push({
+                            date: d,
+                            label: d.toLocaleDateString('de-DE', { month: 'long' }),
+                            shortLabel: d.toLocaleDateString('de-DE', { month: 'short' }),
+                            monthNum: String(m + 1).padStart(2, '0'),
+                            year: y,
+                            monthIndex: m,
+                            isFirstMonthOfYear: m === 0,
+                            isLastMonthOfYear: m === 11,
+                            isCurrentMonth: y === nowYear && m === nowMonth
+                        });
+                    }
+                }
+            } else if (state.viewMode === 'quarter') {
+                colWidth = 115;
+                daysPerColumn = 30.4375;
+                const startYear = baseDate.getFullYear();
+                const maxTaskYear = getMaxTaskYear(startYear);
+                const endYear = Math.max(startYear + 4, maxTaskYear + 1);
+
+                for (let y = startYear; y <= endYear; y++) {
+                    for (let m = 0; m < 12; m++) {
+                        const d = new Date(y, m, 1);
+                        const lastDay = new Date(y, m + 1, 0).getDate();
+                        const quarter = Math.floor(m / 3) + 1;
+                        columns.push({
+                            date: d,
+                            label: d.toLocaleDateString('de-DE', { month: 'long' }),
+                            subLabel: `01. – ${lastDay}.${String(m + 1).padStart(2, '0')}.`,
+                            year: y,
+                            quarter: `Q${quarter} ${y}`,
+                            quarterIndex: quarter,
+                            isFirstOfQuarter: m % 3 === 0,
+                            isLastOfQuarter: m % 3 === 2,
+                            isFirstMonthOfYear: m === 0,
+                            monthIndex: m
+                        });
+                    }
+                }
+            }
+            return { columns, colWidth, daysPerColumn };
+        }
+
+        function isSameDay(d1, d2) {
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
+        }
+
+        function getISOWeek(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function renderTimelineHeader() {
+            const headerContainer = document.getElementById('gantt-timeline-header');
+            if (!headerContainer) return;
+            const { columns, colWidth } = getTimelineConfig();
+            const totalWidth = columns.length * colWidth;
+
+            let headerInnerHtml = '';
+
+            if (state.viewMode === 'quarter') {
+                let quartersList = [];
+                columns.forEach(col => {
+                    const last = quartersList[quartersList.length - 1];
+                    if (!last || last.name !== col.quarter) {
+                        quartersList.push({
+                            name: col.quarter,
+                            width: colWidth,
+                            qIdx: col.quarterIndex,
+                            isNewYear: col.isFirstMonthOfYear,
+                            year: col.year
+                        });
+                    } else {
+                        last.width += colWidth;
+                    }
+                });
+
+                let topRow = quartersList.map(q => `
+                    <div class="h-6 ${q.isNewYear ? 'border-l-2 border-l-blue-600 dark:border-l-blue-400' : ''} border-r border-r-slate-300 dark:border-r-slate-600 border-b border-slate-200 dark:border-slate-700 px-3 text-xs font-extrabold flex items-center justify-between ${q.qIdx % 2 === 1 ? 'bg-slate-100 dark:bg-slate-700/80 text-slate-800 dark:text-slate-100' : 'bg-brand-50/70 dark:bg-slate-800 text-brand-800 dark:text-brand-300'}" style="width: ${q.width}px; min-width: ${q.width}px;">
+                        <span>${q.name}</span>
+                        <span class="text-[10px] font-medium opacity-75">Quartal ${q.qIdx}</span>
+                    </div>
+                `).join('');
+
+                let bottomRow = columns.map(col => `
+                    <div class="h-6 border-r border-slate-200 dark:border-slate-700 ${col.isFirstMonthOfYear ? 'border-l-2 border-l-blue-600 dark:border-l-blue-400' : col.isFirstOfQuarter ? 'border-l-2 border-l-brand-500/70' : ''} px-2 text-[10px] font-semibold flex items-center justify-between ${col.monthIndex % 2 === 0 ? 'bg-slate-50/80 dark:bg-slate-800/80' : 'bg-white dark:bg-slate-800'} text-slate-700 dark:text-slate-200" style="width: ${colWidth}px; min-width: ${colWidth}px;">
+                        <span>${col.label}</span>
+                        <span class="text-[9px] text-slate-400 font-normal">${col.subLabel}</span>
+                    </div>
+                `).join('');
+
+                headerInnerHtml = `<div class="flex flex-col"><div class="flex">${topRow}</div><div class="flex">${bottomRow}</div></div>`;
+
+            } else if (state.viewMode === 'month') {
+                let yearsList = [];
+                columns.forEach(col => {
+                    const last = yearsList[yearsList.length - 1];
+                    if (!last || last.year !== col.year) {
+                        yearsList.push({ year: col.year, width: colWidth });
+                    } else {
+                        last.width += colWidth;
+                    }
+                });
+
+                let topRow = yearsList.map(y => `
+                    <div class="h-6 border-l-2 border-l-blue-600 dark:border-l-blue-400 border-r border-r-slate-300 dark:border-r-slate-600 border-b border-slate-200 dark:border-slate-700 px-3 text-xs font-bold flex items-center justify-between bg-slate-100 dark:bg-slate-700/90 text-slate-800 dark:text-slate-100" style="width: ${y.width}px; min-width: ${y.width}px;">
+                        <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400"></i>Jahresübersicht ${y.year} (Januar – Dezember)</span>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300">${y.year}</span>
+                    </div>
+                `).join('');
+
+                let bottomRow = columns.map(col => {
+                    const yearStartBorder = col.isFirstMonthOfYear ? 'border-l-2 border-l-blue-600 dark:border-l-blue-400' : '';
+                    const monthBg = col.isCurrentMonth
+                        ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 font-bold'
+                        : (col.monthIndex % 2 === 0
+                            ? 'bg-slate-50/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200');
+
+                    return `
+                        <div class="h-6 ${yearStartBorder} border-r border-slate-200 dark:border-slate-700 px-2 text-[11px] flex items-center justify-between leading-tight ${monthBg}" style="width: ${colWidth}px; min-width: ${colWidth}px;" title="${col.label} ${col.year}">
+                            <span class="font-semibold truncate">${col.label}</span>
+                            <span class="text-[9px] text-slate-400 dark:text-slate-500 font-mono">${col.monthNum}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                headerInnerHtml = `<div class="flex flex-col"><div class="flex">${topRow}</div><div class="flex">${bottomRow}</div></div>`;
+
+            } else {
+                headerInnerHtml = `<div class="flex">` + columns.map(col => `
+                    <div class="h-12 border-r ${col.isFirstOfMonth ? 'border-l-2 border-l-brand-500' : 'border-slate-200 dark:border-slate-700'} text-center text-[11px] font-medium flex flex-col justify-center items-center ${col.isToday ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300' : col.isWeekend ? 'bg-slate-100/60 dark:bg-slate-800/40 text-slate-400' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'}" style="width: ${colWidth}px; min-width: ${colWidth}px;">
+                        <span class="font-bold">${col.label}</span>
+                        <span class="text-[9px] text-slate-400">${col.subLabel || col.monthName}</span>
+                    </div>
+                `).join('') + `</div>`;
+            }
+
+            headerContainer.innerHTML = `<div id="gantt-timeline-inner" class="flex shrink-0 will-change-transform" style="width: ${totalWidth}px;">${headerInnerHtml}</div>`;
+            
+            const viewport = document.getElementById('gantt-viewport');
+            if (viewport) {
+                const headerInner = document.getElementById('gantt-timeline-inner');
+                if (headerInner) headerInner.style.transform = `translateX(-${viewport.scrollLeft}px)`;
+            }
+        }
+
+        function renderTimelineCanvas() {
+            const canvas = document.getElementById('gantt-canvas-content');
+            if (!canvas) return;
+            const { columns, colWidth, daysPerColumn } = getTimelineConfig();
+            const tasks = getFilteredTasks();
+
+            const totalWidth = columns.length * colWidth;
+            canvas.style.width = `${totalWidth}px`;
+
+            let gridHtml = `<div class="absolute inset-0 flex pointer-events-none">` + columns.map(col => {
+                let colClasses = 'border-r border-slate-200/70 dark:border-slate-800/70';
+                if (state.viewMode === 'month') {
+                    if (col.isFirstMonthOfYear) {
+                        colClasses += ' border-l-2 border-l-blue-600/70 dark:border-l-blue-400/70';
+                    }
+                    if (col.isCurrentMonth) {
+                        colClasses += ' bg-amber-500/5';
+                    } else {
+                        colClasses += col.monthIndex % 2 === 0 ? ' bg-slate-100/45 dark:bg-slate-800/25' : ' bg-transparent';
+                    }
+                } else if (state.viewMode === 'quarter') {
+                    if (col.isFirstMonthOfYear) {
+                        colClasses += ' border-l-2 border-l-blue-600/70 dark:border-l-blue-400/70';
+                    } else if (col.isFirstOfQuarter) {
+                        colClasses += ' border-l-2 border-l-brand-500/50';
+                    }
+                    colClasses += col.monthIndex % 2 === 0 ? ' bg-slate-100/45 dark:bg-slate-800/25' : ' bg-transparent';
+                } else {
+                    if (col.isWeekend) colClasses += ' bg-slate-100/40 dark:bg-slate-800/25';
+                }
+                if (col.isToday) colClasses += ' bg-amber-500/10';
+
+                return `<div class="h-full ${colClasses}" style="width: ${colWidth}px; min-width: ${colWidth}px;"></div>`;
+            }).join('') + `</div>`;
+
+            let rowsHtml = '';
+            const startDateMin = columns[0].date;
+
+            tasks.forEach(task => {
+                const barStyle = calculateBarStyle(task.startDate, task.endDate, startDateMin, colWidth, state.viewMode);
+                const emp = state.employees.find(e => e.id === task.assignee);
+                const color = emp ? emp.color : '#2563eb';
+                const empLabel = emp ? `${emp.name} (${emp.role || 'Mitarbeiter'})` : 'Unzugewiesen';
+                
+                const completedSub = task.subtasks.filter(s => s.status === 'Erledigt').length;
+                const progress = task.subtasks.length > 0 ? Math.round((completedSub / task.subtasks.length) * 100) : (task.status === 'Erledigt' ? 100 : 0);
+                const safeTitle = escapeQuotes(task.title);
+                const safeEmpLabel = escapeQuotes(empLabel);
+
+                rowsHtml += `
+                    <div class="h-12 border-b border-slate-100 dark:border-slate-800 relative flex items-center">
+                        ${barStyle ? `
+                            <div class="absolute h-7 rounded-lg shadow-sm flex items-center group cursor-move transition-shadow hover:ring-2 hover:ring-brand-400"
+                                 style="left: ${barStyle.left}px; width: ${barStyle.width}px; background-color: ${color};"
+                                 title="${safeTitle} (${formatDateDE(task.startDate)} – ${formatDateDE(task.endDate)})"
+                                 onmousedown="startBarDrag(event, '${task.id}', null, 'move', ${colWidth}, ${daysPerColumn})"
+                                 onmouseenter="showTooltip(event, '${safeTitle}', '${task.startDate}', '${task.endDate}', '${safeEmpLabel}')"
+                                 onmousemove="moveTooltip(event)"
+                                 onmouseleave="hideTooltip()">
+                                
+                                <div class="absolute left-0 top-0 bottom-0 w-2.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/25 hover:bg-black/40 rounded-l-lg"
+                                     onmousedown="startBarDrag(event, '${task.id}', null, 'resize-left', ${colWidth}, ${daysPerColumn}); event.stopPropagation();"></div>
+
+                                <div class="absolute inset-y-0 left-0 bg-black/25 rounded-lg pointer-events-none transition-all" style="width: ${progress}%;"></div>
+
+                                <span class="px-2.5 text-white text-[11px] font-semibold truncate relative z-10 drop-shadow-xs flex-1">${task.title} ${progress > 0 ? `(${progress}%)` : ''}</span>
+
+                                <div class="absolute right-0 top-0 bottom-0 w-2.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/25 hover:bg-black/40 rounded-r-lg"
+                                     onmousedown="startBarDrag(event, '${task.id}', null, 'resize-right', ${colWidth}, ${daysPerColumn}); event.stopPropagation();"></div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                if (task.expanded && task.subtasks.length > 0) {
+                    task.subtasks.forEach(st => {
+                        const stBarStyle = calculateBarStyle(st.startDate, st.endDate, startDateMin, colWidth, state.viewMode);
+                        const stEmp = state.employees.find(e => e.id === st.assignee);
+                        const stColor = stEmp ? stEmp.color : color;
+                        const stEmpLabel = stEmp ? `${stEmp.name} (${stEmp.role || 'Mitarbeiter'})` : empLabel;
+                        const safeStTitle = escapeQuotes(st.title);
+                        const safeStEmpLabel = escapeQuotes(stEmpLabel);
+
+                        rowsHtml += `
+                            <div class="h-9 border-b border-slate-100 dark:border-slate-800/60 relative flex items-center bg-slate-50/40 dark:bg-slate-800/20">
+                                ${stBarStyle ? `
+                                    <div class="absolute h-5 rounded-md shadow-2xs flex items-center group cursor-move opacity-90 hover:opacity-100 hover:ring-2 hover:ring-white dark:hover:ring-slate-700"
+                                         style="left: ${stBarStyle.left}px; width: ${stBarStyle.width}px; background-color: ${stColor};"
+                                         title="${safeStTitle} (${formatDateDE(st.startDate)} – ${formatDateDE(st.endDate)})"
+                                         onmousedown="startBarDrag(event, '${task.id}', '${st.id}', 'move', ${colWidth}, ${daysPerColumn})"
+                                         onmouseenter="showTooltip(event, '↳ ${safeStTitle}', '${st.startDate}', '${st.endDate}', '${safeStEmpLabel}')"
+                                         onmousemove="moveTooltip(event)"
+                                         onmouseleave="hideTooltip()">
+                                        
+                                        <div class="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/30 rounded-l-md"
+                                             onmousedown="startBarDrag(event, '${task.id}', '${st.id}', 'resize-left', ${colWidth}, ${daysPerColumn}); event.stopPropagation();"></div>
+
+                                        <span class="px-2 text-white text-[10px] font-medium truncate relative z-10 flex-1 ${st.status === 'Erledigt' ? 'line-through opacity-80' : ''}">${st.title} ${stEmp ? `• ${stEmp.name}` : ''}</span>
+
+                                        <div class="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/30 rounded-r-md"
+                                             onmousedown="startBarDrag(event, '${task.id}', '${st.id}', 'resize-right', ${colWidth}, ${daysPerColumn}); event.stopPropagation();"></div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                }
+            });
+
+            canvas.innerHTML = gridHtml + `<div class="relative z-10">${rowsHtml}</div>`;
+        }
+
+        function calculateBarStyle(startDateStr, endDateStr, timelineMinDate, colWidth, viewMode) {
+            if (!startDateStr || !endDateStr) return null;
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+            const minDate = new Date(timelineMinDate);
+            start.setHours(0,0,0,0);
+            end.setHours(0,0,0,0);
+            minDate.setHours(0,0,0,0);
+
+            if (isNaN(start) || isNaN(end) || end < start) return null;
+
+            const dayDiff = (start - minDate) / (1000 * 60 * 60 * 24);
+            const durationDays = ((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+            let left = 0;
+            let width = 0;
+
+            if (viewMode === 'day') {
+                left = dayDiff * colWidth;
+                width = durationDays * colWidth;
+            } else if (viewMode === 'week') {
+                left = (dayDiff / 7) * colWidth;
+                width = (durationDays / 7) * colWidth;
+            } else if (viewMode === 'month' || viewMode === 'quarter') {
+                const startMonthsDiff = (start.getFullYear() - minDate.getFullYear()) * 12 + (start.getMonth() - minDate.getMonth());
+                const daysInStartMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+                const startFraction = (start.getDate() - 1) / daysInStartMonth;
+                const startPosMonths = startMonthsDiff + startFraction;
+
+                const endMonthsDiff = (end.getFullYear() - minDate.getFullYear()) * 12 + (end.getMonth() - minDate.getMonth());
+                const daysInEndMonth = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+                const endFraction = end.getDate() / daysInEndMonth;
+                const endPosMonths = endMonthsDiff + endFraction;
+
+                left = startPosMonths * colWidth;
+                width = Math.max((endPosMonths - startPosMonths) * colWidth, 18);
+            }
+
+            return { left: Math.round(left), width: Math.max(Math.round(width), 18) };
+        }
+
+        // --- SCROLL SYNC ---
+        let isSyncingScroll = false;
+
+        function syncScrollFromViewport(viewport) {
+            const headerInner = document.getElementById('gantt-timeline-inner');
+            if (headerInner) {
+                headerInner.style.transform = `translateX(-${viewport.scrollLeft}px)`;
+            }
+            if (isSyncingScroll) return;
+            isSyncingScroll = true;
+            const sidebar = document.getElementById('gantt-sidebar-list');
+            if (sidebar) sidebar.scrollTop = viewport.scrollTop;
+            requestAnimationFrame(() => { isSyncingScroll = false; });
+        }
+
+        function syncScrollFromSidebar(sidebar) {
+            if (isSyncingScroll) return;
+            isSyncingScroll = true;
+            const viewport = document.getElementById('gantt-viewport');
+            if (viewport) viewport.scrollTop = sidebar.scrollTop;
+            requestAnimationFrame(() => { isSyncingScroll = false; });
+        }
+
+        // --- GANTT BAR DRAG & RESIZE ---
+        let activeDrag = null;
+
+        function startBarDrag(e, taskId, subtaskId, mode, colWidth, daysPerColumn) {
+            e.stopPropagation();
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const item = subtaskId ? task.subtasks.find(st => st.id === subtaskId) : task;
+            if (!item) return;
+
+            activeDrag = {
+                taskId,
+                subtaskId,
+                mode,
+                startX: e.clientX,
+                origStart: new Date(item.startDate),
+                origEnd: new Date(item.endDate),
+                pxPerDay: colWidth / (daysPerColumn || 1)
+            };
+
+            window.addEventListener('mousemove', onBarMouseMove);
+            window.addEventListener('mouseup', onBarMouseUp);
+        }
+
+        function onBarMouseMove(e) {
+            if (!activeDrag) return;
+            const dx = e.clientX - activeDrag.startX;
+            const daysDelta = Math.round(dx / activeDrag.pxPerDay);
+
+            const task = state.tasks.find(t => t.id === activeDrag.taskId);
+            const item = activeDrag.subtaskId ? task.subtasks.find(st => st.id === activeDrag.subtaskId) : task;
+
+            let newStart = new Date(activeDrag.origStart);
+            let newEnd = new Date(activeDrag.origEnd);
+
+            if (activeDrag.mode === 'move') {
+                newStart.setDate(newStart.getDate() + daysDelta);
+                newEnd.setDate(newEnd.getDate() + daysDelta);
+            } else if (activeDrag.mode === 'resize-left') {
+                newStart.setDate(newStart.getDate() + daysDelta);
+                if (newStart > newEnd) newStart = new Date(newEnd);
+            } else if (activeDrag.mode === 'resize-right') {
+                newEnd.setDate(newEnd.getDate() + daysDelta);
+                if (newEnd < newStart) newEnd = new Date(newStart);
+            }
+
+            item.startDate = newStart.toISOString().split('T')[0];
+            item.endDate = newEnd.toISOString().split('T')[0];
+
+            if (activeDrag.subtaskId) {
+                if (newStart < new Date(task.startDate)) task.startDate = item.startDate;
+                if (newEnd > new Date(task.endDate)) task.endDate = item.endDate;
+            }
+
+            const emp = state.employees.find(em => em.id === item.assignee);
+            const empLabel = emp ? `${emp.name} (${emp.role || 'Mitarbeiter'})` : 'Unzugewiesen';
+            showTooltip(e, escapeQuotes(item.title), item.startDate, item.endDate, escapeQuotes(empLabel));
+            renderTimelineCanvas();
+        }
+
+        function onBarMouseUp() {
+            if (activeDrag) {
+                activeDrag = null;
+                window.removeEventListener('mousemove', onBarMouseMove);
+                window.removeEventListener('mouseup', onBarMouseUp);
+                hideTooltip();
+                renderApp();
+            }
+        }
+
+        // --- TOOLTIP ---
+        function showTooltip(e, title, startStr, endStr, empLabel) {
+            const tip = document.getElementById('gantt-tooltip');
+            if (!tip) return;
+            const s = new Date(startStr);
+            const end = new Date(endStr);
+            const days = Math.max(1, Math.round((end - s) / (1000 * 60 * 60 * 24)) + 1);
+            const kwStart = getISOWeek(s);
+            const kwEnd = getISOWeek(end);
+
+            tip.innerHTML = `
+                <div class="font-bold text-brand-300 border-b border-slate-700 pb-1 mb-0.5 break-words leading-snug">${title}</div>
+                <div class="text-[10px] text-slate-300">Bearbeiter: <span class="text-white font-semibold">${empLabel || '—'}</span></div>
+                <div class="text-[10px] text-slate-300">Zeitraum: <span class="text-white font-mono">${formatDateDE(startStr)}</span> bis <span class="text-white font-mono">${formatDateDE(endStr)}</span></div>
+                <div class="text-[10px] text-emerald-300 font-semibold">Dauer: ${days} ${days === 1 ? 'Tag' : 'Tage'} (KW ${kwStart}${kwEnd !== kwStart ? `–${kwEnd}` : ''})</div>
+            `;
+            moveTooltip(e);
+            tip.classList.remove('hidden');
+            tip.classList.add('opacity-100');
+        }
+
+        function moveTooltip(e) {
+            const tip = document.getElementById('gantt-tooltip');
+            if (!tip) return;
+            tip.style.left = `${Math.min(window.innerWidth - 300, e.clientX + 14)}px`;
+            tip.style.top = `${Math.max(12, e.clientY - 85)}px`;
+        }
+
+        function hideTooltip() {
+            if (activeDrag) return;
+            const tip = document.getElementById('gantt-tooltip');
+            if (!tip) return;
+            tip.classList.remove('opacity-100');
+            tip.classList.add('hidden');
+        }
+
+        // --- TASK & SUBTASK MODAL ---
+        function openTaskModal(taskId = null, presetStatus = 'Offen') {
+            const modal = document.getElementById('task-modal');
+            const titleEl = document.getElementById('task-modal-title');
+            const deleteBtn = document.getElementById('task-delete-btn');
+            
+            document.getElementById('edit-task-id').value = taskId || '';
+            const subContainer = document.getElementById('subtasks-container');
+            subContainer.innerHTML = '';
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (taskId) {
+                titleEl.textContent = 'Aufgabe & Unteraufgaben bearbeiten';
+                deleteBtn.classList.remove('hidden');
+                const task = state.tasks.find(t => t.id === taskId);
+                if (task) {
+                    document.getElementById('task-title-input').value = task.title;
+                    document.getElementById('task-start-input').value = task.startDate;
+                    document.getElementById('task-end-input').value = task.endDate;
+                    document.getElementById('task-assignee-input').value = task.assignee;
+                    document.getElementById('task-status-input').value = task.status;
+
+                    task.subtasks.forEach(st => addSubtaskField(st));
+                }
+            } else {
+                titleEl.textContent = 'Neue Aufgabe erstellen';
+                deleteBtn.classList.add('hidden');
+                document.getElementById('task-title-input').value = '';
+                document.getElementById('task-start-input').value = todayStr;
+                document.getElementById('task-end-input').value = getOffsetDate(10);
+                document.getElementById('task-status-input').value = presetStatus || 'Offen';
+                if(state.employees.length > 0) document.getElementById('task-assignee-input').value = state.employees[0].id;
+            }
+
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeTaskModal() {
+            document.getElementById('task-modal').classList.add('hidden');
+        }
+
+        let draggedModalSubtaskRow = null;
+        function modalSubtaskDragStart(e) {
+            draggedModalSubtaskRow = e.currentTarget;
+            e.currentTarget.classList.add('dragging-item');
+        }
+        function modalSubtaskDragOver(e) {
+            e.preventDefault();
+            const target = e.currentTarget;
+            if (!draggedModalSubtaskRow || draggedModalSubtaskRow === target) return;
+            const container = document.getElementById('subtasks-container');
+            const rect = target.getBoundingClientRect();
+            const after = (e.clientY - rect.top) > (rect.height / 2);
+            container.insertBefore(draggedModalSubtaskRow, after ? target.nextSibling : target);
+        }
+        function modalSubtaskDragEnd(e) {
+            e.currentTarget.classList.remove('dragging-item');
+            draggedModalSubtaskRow = null;
+        }
+
+        function addSubtaskField(data = null) {
+            const container = document.getElementById('subtasks-container');
+            const id = data ? data.id : 'st_' + Math.random().toString(36).substring(2, 9);
+            const title = data ? escapeQuotes(data.title) : '';
+            const start = data ? data.startDate : document.getElementById('task-start-input').value;
+            const end = data ? data.endDate : document.getElementById('task-end-input').value;
+            const assignee = data ? data.assignee : (document.getElementById('task-assignee-input').value || '');
+            const status = data ? data.status : 'Offen';
+
+            const empOptions = '<option value="">— Kein Bearbeiter —</option>' + [...state.employees].sort((a,b) => a.order - b.order).map(e => 
+                `<option value="${e.id}" ${assignee === e.id ? 'selected' : ''}>${e.name} (${e.role || 'Mitarbeiter'})</option>`
+            ).join('');
+
+            const div = document.createElement('div');
+            div.className = 'bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 subtask-row space-y-2 transition';
+            div.dataset.subid = id;
+            div.draggable = true;
+            div.addEventListener('dragstart', modalSubtaskDragStart);
+            div.addEventListener('dragover', modalSubtaskDragOver);
+            div.addEventListener('dragend', modalSubtaskDragEnd);
+
+            div.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <span class="cursor-grab text-slate-400 hover:text-slate-600" title="Per Drag & Drop umsortieren"><i data-lucide="grip-vertical" class="w-4 h-4"></i></span>
+                    <input type="text" value="${title}" placeholder="Titel der Unteraufgabe..." class="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none font-medium st-title">
+                    <select class="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs st-assignee" title="Bearbeiter der Unteraufgabe">
+                        ${empOptions}
+                    </select>
+                    <button type="button" onclick="this.closest('.subtask-row').remove()" class="text-slate-400 hover:text-rose-600 p-1" title="Unteraufgabe entfernen"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 pl-6 text-xs">
+                    <span class="text-slate-400">Start:</span>
+                    <input type="date" value="${start}" class="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg st-start">
+                    <span class="text-slate-400">Ende:</span>
+                    <input type="date" value="${end}" class="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg st-end">
+                    <span class="text-slate-400">Status:</span>
+                    <select class="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg st-status">
+                        <option value="Offen" ${status==='Offen'?'selected':''}>Offen</option>
+                        <option value="In Bearbeitung" ${status==='In Bearbeitung'?'selected':''}>In Bearbeitung</option>
+                        <option value="Erledigt" ${status==='Erledigt'?'selected':''}>Erledigt</option>
+                    </select>
+                </div>
+            `;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        function saveTaskFromModal() {
+            const id = document.getElementById('edit-task-id').value;
+            const title = document.getElementById('task-title-input').value.trim();
+            let startDate = document.getElementById('task-start-input').value;
+            let endDate = document.getElementById('task-end-input').value;
+            const assignee = document.getElementById('task-assignee-input').value;
+            let status = document.getElementById('task-status-input').value;
+
+            if (!title) { showToast('Bitte geben Sie einen Aufgabentitel ein.', 'warning'); return; }
+            if (endDate < startDate) { showToast('Das Enddatum darf nicht vor dem Startdatum liegen.', 'warning'); return; }
+
+            const subtasks = [];
+            document.querySelectorAll('.subtask-row').forEach(row => {
+                const stTitle = row.querySelector('.st-title').value.trim();
+                if (stTitle) {
+                    const stStart = row.querySelector('.st-start').value || startDate;
+                    const stEnd = row.querySelector('.st-end').value || endDate;
+                    if (stStart < startDate) startDate = stStart;
+                    if (stEnd > endDate) endDate = stEnd;
+
+                    subtasks.push({
+                        id: row.dataset.subid,
+                        title: stTitle,
+                        startDate: stStart,
+                        endDate: stEnd < stStart ? stStart : stEnd,
+                        assignee: row.querySelector('.st-assignee').value,
+                        status: row.querySelector('.st-status').value
+                    });
+                }
+            });
+
+            if (subtasks.length > 0 && subtasks.every(s => s.status === 'Erledigt')) {
+                status = 'Erledigt';
+            }
+
+            if (id) {
+                const task = state.tasks.find(t => t.id === id);
+                if (task) {
+                    task.title = title;
+                    task.startDate = startDate;
+                    task.endDate = endDate;
+                    task.assignee = assignee;
+                    task.status = status;
+                    task.subtasks = subtasks;
+                }
+                showToast('Aufgabe erfolgreich aktualisiert.', 'success');
+            } else {
+                const newTask = {
+                    id: 't_' + Math.random().toString(36).substring(2, 9),
+                    title,
+                    startDate,
+                    endDate,
+                    assignee,
+                    status,
+                    order: state.tasks.length,
+                    expanded: true,
+                    subtasks
+                };
+                state.tasks.push(newTask);
+                showToast('Neue Aufgabe wurde angelegt.', 'success');
+            }
+
+            closeTaskModal();
+            renderApp();
+        }
+
+        function deleteTaskFromModal() {
+            const id = document.getElementById('edit-task-id').value;
+            if (id) {
+                const task = state.tasks.find(t => t.id === id);
+                confirmAction('Aufgabe löschen', `Möchten Sie die Aufgabe "${task ? task.title : ''}" inklusive aller Unteraufgaben wirklich unwiderruflich löschen?`, () => {
+                    state.tasks = state.tasks.filter(t => t.id !== id);
+                    closeTaskModal();
+                    renderApp();
+                    showToast('Aufgabe gelöscht.', 'info');
+                });
+            }
+        }
+
+        function confirmDeleteTask(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            confirmAction('Aufgabe löschen', `Möchten Sie "${task ? task.title : 'diese Aufgabe'}" wirklich löschen?`, () => {
+                state.tasks = state.tasks.filter(t => t.id !== taskId);
+                renderApp();
+                showToast('Aufgabe gelöscht.', 'info');
+            });
+        }
+
+        function confirmDeleteSubtask(taskId, stId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const st = task.subtasks.find(s => s.id === stId);
+            confirmAction('Unteraufgabe löschen', `Möchten Sie die Unteraufgabe "${st ? st.title : ''}" wirklich löschen?`, () => {
+                task.subtasks = task.subtasks.filter(s => s.id !== stId);
+                syncParentTaskStatus(task);
+                renderApp();
+                showToast('Unteraufgabe gelöscht.', 'info');
+            });
+        }
+
+        function clearCompletedTasks() {
+            const completedCount = state.tasks.filter(t => t.status === 'Erledigt').length;
+            if (completedCount === 0) {
+                showToast('Es sind aktuell keine erledigten Hauptaufgaben vorhanden.', 'info');
+                return;
+            }
+            confirmAction('Erledigte Aufgaben löschen', `Möchten Sie alle ${completedCount} als "Erledigt" markierten Hauptaufgaben entfernen?`, () => {
+                state.tasks = state.tasks.filter(t => t.status !== 'Erledigt');
+                renderApp();
+                showToast(`${completedCount} erledigte Aufgabe(n) entfernt.`, 'success');
+            });
+        }
+
+        // --- EMPLOYEE MODAL & CRUD ---
+        function openEmployeeModal() { document.getElementById('employee-modal').classList.remove('hidden'); lucide.createIcons(); }
+        function closeEmployeeModal() { document.getElementById('employee-modal').classList.add('hidden'); }
+
+        function addEmployee() {
+            const nameInput = document.getElementById('new-emp-name');
+            const roleInput = document.getElementById('new-emp-role');
+            const colorInput = document.getElementById('new-emp-color');
+            const name = nameInput.value.trim();
+            const role = roleInput.value.trim();
+            if (!name) {
+                showToast('Bitte geben Sie einen Namen für das Teammitglied ein.', 'warning');
+                return;
+            }
+
+            state.employees.push({
+                id: 'e_' + Math.random().toString(36).substring(2, 9),
+                name,
+                role: role || 'Teammitglied',
+                color: colorInput.value,
+                order: state.employees.length
+            });
+
+            nameInput.value = '';
+            roleInput.value = '';
+            renderApp();
+            showToast(`${name} (${role || 'Teammitglied'}) wurde hinzugefügt.`, 'success');
+        }
+
+        function confirmDeleteEmployee(empId) {
+            const emp = state.employees.find(e => e.id === empId);
+            confirmAction('Mitarbeiter löschen', `Möchten Sie "${emp ? emp.name : 'diesen Mitarbeiter'}" (${emp ? emp.role : ''}) wirklich aus dem Team entfernen? Zugewiesene Aufgaben bleiben erhalten.`, () => {
+                state.employees = state.employees.filter(e => e.id !== empId);
+                state.tasks.forEach(t => { 
+                    if(t.assignee === empId) t.assignee = ''; 
+                    t.subtasks.forEach(st => { if(st.assignee === empId) st.assignee = ''; });
+                });
+                renderApp();
+                showToast('Mitarbeiter wurde entfernt.', 'info');
+            });
+        }
+
+        // --- CONFIRMATION MODAL ---
+        let confirmCallback = null;
+        function confirmAction(title, message, callback) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmCallback = callback;
+            document.getElementById('modal-confirm').classList.remove('hidden');
+            lucide.createIcons();
+        }
+        function closeConfirmModal(result) {
+            document.getElementById('modal-confirm').classList.add('hidden');
+            if (result && confirmCallback) confirmCallback();
+            confirmCallback = null;
+        }
+        document.getElementById('confirm-yes-btn').addEventListener('click', () => closeConfirmModal(true));
+
+        // --- JSON EXPORT / IMPORT ---
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `Gantt_Kanban_Export_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast('Projekt-JSON wurde exportiert.', 'success');
+        }
+
+        function importDataJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.employees && imported.tasks) {
+                        state.employees = imported.employees;
+                        state.tasks = imported.tasks;
+                        if (imported.mainView) state.mainView = imported.mainView;
+                        if (imported.viewMode) state.viewMode = imported.viewMode;
+                        state.darkMode = imported.darkMode || false;
+                        document.documentElement.classList.toggle('dark', state.darkMode);
+                        renderApp();
+                        showToast('Projektdaten erfolgreich importiert!', 'success');
+                    } else {
+                        showToast('Ungültiges JSON-Dateiformat.', 'error');
+                    }
+                } catch(err) {
+                    showToast('Fehler beim Einlesen der JSON-Datei.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
