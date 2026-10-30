@@ -31,13 +31,28 @@ Einfach das Datenpaket als ZIP herunterladen, entpacken und **TaskFlow_*.html** 
 - Aufgaben nach Status filtern
 - Dark Mode
 
-## Version 11 ##
+## Versionen ##
+
+### Version 11.5 ###
+- Design verbessert
+
+### Version 11.4 ###
+- "Team"-Button gekürzt
+
+### Version 11.3 ###
 - Kanban-Ansicht für Unteraufgaben ergänzt
 - die Eingaben werden nun automatisch alle 30 Sekunden im lokalen Ordner des Users / Browsers gesichert
 - Auswahl Rolle des Bearbeiters im Team ergänzt
 - Farbe des Bearbeiters ändern
 - Ansicht "Monat" verbessert
 - Ansicht Quartal ergänzt
+
+### Version 9.6 ###
+- Einfügen von Autosave für File System Access API (Edge)
+
+### Version 9.2 ###
+- Basisversion
+  
 
  ## To Do's ##
 An der Anwendung kann noch verbessert werden:
@@ -51,7 +66,3 @@ An der Anwendung kann noch verbessert werden:
 **Ich freue mich auf Mitarbeit!**
 
 --------------------------------------------
-  
-## Alte Versionen ##
-- 9.2  Basisversion
-- 9.6  Einfügen von Autosave für File System Access API (Edge)
