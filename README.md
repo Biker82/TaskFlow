@@ -33,6 +33,10 @@ Einfach das Datenpaket als ZIP herunterladen, entpacken und **TaskFlow_*.html** 
 
 ## Versionen ##
 
+### Version 11.7 ###
+- Aufgabenfenster vertikal vergrößert, um den Überblick zu Unteraufgaben zu verbessern 
+- Aufgaben-Frame kann manuell horizontal vergrößert werden
+
 ### Version 11.5 ###
 - Design verbessert
 
