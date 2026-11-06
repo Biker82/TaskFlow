@@ -33,6 +33,11 @@ Einfach das Datenpaket als ZIP herunterladen, entpacken und **TaskFlow_*.html** 
 
 ## Versionen ##
 
+### Version 11.10 ###
+- Die Inhalte können als Tabelle aus dem LibreOffice-Calc-Format importiert werden.
+
+### Version 11.9 ###
+- Die Inhalte können als Tabelle im LibreOffice-Calc-Format exportiert werden.
 
 ### Version 11.8 ###
 - Aufgaben lassen sich nun alle auf einmal auf- und zuklappen, um Unteraufgaben aus-/einzublenden.
