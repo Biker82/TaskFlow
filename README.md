@@ -5,6 +5,8 @@
 
 &#x27A1; **Aufgaben eines Teams einfach mit einem Gantt-Diagramm organisieren.**
 
+*erstellt mit Gemini Argon*
+
 ![TaskFlow_Screenshot1.jpg](TaskFlow_Screenshot1.jpg)
 ![TaskFlow_Screenshot2.jpg](TaskFlow_Screenshot2.jpg)
 ![TaskFlow_Screenshot3.jpg](TaskFlow_Screenshot3.jpg)
