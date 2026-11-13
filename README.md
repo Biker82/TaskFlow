@@ -11,6 +11,9 @@
 ![TaskFlow_Screenshot2.jpg](TaskFlow_Screenshot2.jpg)
 ![TaskFlow_Screenshot3.jpg](TaskFlow_Screenshot3.jpg)
 ![TaskFlow_Screenshot4.jpg](TaskFlow_Screenshot4.jpg)
+![TaskFlow_Screenshot_Dashboard.jpg](TaskFlow_Screenshot_Dashboard.jpg)
+![TaskFlow_Screenshot_Kategorien.jpg](TaskFlow_Screenshot_Kategorien.jpg)
+
 
 Bei vielen Aufgaben ist es schwer, den Überblick zu behalten. Vor allem, wenn man ein Team leitet.
 Es gibt zahlreiche Software dafür auf dem Markt. Mir waren alle zu unübersichtlich, zu umfangreich, zu teuer und ohne Datensicherheit. Da ich nicht fündig geworden bin, habe ich für mich mit Google Gemini eine eigene App erstellt.
@@ -34,6 +37,12 @@ Es gibt zahlreiche Software dafür auf dem Markt. Mir waren alle zu unübersicht
 - Dark Mode
 
 ## Versionen ##
+
+### Version 11.14 ###
+- Code-Fehler entfernt
+- Neue "Dashboard"-Ansicht
+- Beschreibungen standardisiert
+- Aufgaben-Kategorien eingefügt
 
 ### Version 11.10 ###
 - Die Inhalte können als Tabelle aus dem LibreOffice-Calc-Format importiert werden.
